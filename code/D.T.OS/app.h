@@ -8,6 +8,7 @@ typedef struct
 {
     const char* name;
     void (*tmain)();
+    byte priority;
 } AppInfo;
 
 void AppModInit();

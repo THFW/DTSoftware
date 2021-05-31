@@ -12,7 +12,7 @@ void TaskB();
 void TaskC();
 void TaskD();
 
-static void RegApp(const char* name, void(*tmain)())
+static void RegApp(const char* name, void(*tmain)(), byte pri)
 {
     if( gAppNum < MAX_APP_NUM )
     {
@@ -20,6 +20,7 @@ static void RegApp(const char* name, void(*tmain)())
         
         app->name = name;
         app->tmain = tmain;
+        app->priority = pri;
         
         gAppNum++;
     }
@@ -27,10 +28,10 @@ static void RegApp(const char* name, void(*tmain)())
 
 void AppModInit()
 {
-    RegApp("Task A", TaskA);
-    RegApp("Task B", TaskB);
-    RegApp("Task C", TaskC);
-    RegApp("Task D", TaskD);
+    RegApp("Task A", TaskA, 255);
+    RegApp("Task B", TaskB, 230);
+    RegApp("Task C", TaskC, 230);
+    RegApp("Task D", TaskD, 255);
 }
 
 AppInfo* GetAppToRun(uint index)

@@ -44,6 +44,8 @@ typedef struct
     ushort     tssSelector;
     void (*tmain)();
     uint       id;
+    ushort     current;
+    ushort     total;
     char       name[8]; 
     byte       stack[512];
 } Task;

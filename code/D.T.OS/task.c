@@ -6,6 +6,7 @@
 #define MAX_TASK_NUM        4
 #define MAX_RUNNING_TASK    2
 #define MAX_READY_TASK      (MAX_TASK_NUM - MAX_RUNNING_TASK)
+#define PID_BASE            0x10
 
 extern AppInfo* GetAppToRun(uint index);
 extern uint GetAppNum();
@@ -22,6 +23,7 @@ static Queue gWaittingTask = {0};
 static TSS gTSS = {0};
 static TaskNode gIdleTask = {0};
 static uint gAppToRunIndex = 0;
+static uint gPid = PID_BASE;
 
 static void TaskEntry()
 {
@@ -54,7 +56,7 @@ static void IdleTask()
     }
 }
 
-static void InitTask(Task* pt, const char* name, void(*entry)())
+static void InitTask(Task* pt, uint id, const char* name, void(*entry)(), ushort pri)
 {
     pt->rv.cs = LDT_CODE32_SELECTOR;
     pt->rv.gs = LDT_VIDEO_SELECTOR;
@@ -68,6 +70,9 @@ static void InitTask(Task* pt, const char* name, void(*entry)())
     pt->rv.eflags = 0x3202;
     
     pt->tmain = entry;
+    pt->id = id;
+    pt->current = 0;
+    pt->total = 256 - pri;
     
     StrCpy(pt->name, name, sizeof(pt->name)-1);
     
@@ -81,6 +86,8 @@ static void InitTask(Task* pt, const char* name, void(*entry)())
 
 static void PrepareForRun(volatile Task* pt)
 {
+    pt->current++;
+    
     gTSS.ss0 = GDT_DATA32_FLAT_SELECTOR;
     gTSS.esp0 = (uint)&pt->rv + sizeof(pt->rv);
     gTSS.iomb = sizeof(TSS);
@@ -100,7 +107,7 @@ static void CreateTask()
         {
             AppInfo* app = GetAppToRun(gAppToRunIndex);
             
-            InitTask(&tn->task, app->name, app->tmain);
+            InitTask(&tn->task, gPid++, app->name, app->tmain, app->priority);
             
             Queue_Add(&gReadyTask, (QueueNode*)tn);
         }
@@ -132,7 +139,7 @@ static void ReadyToRunning()
 {
     QueueNode* node = NULL;
     
-    if( Queue_Length(&gReadyTask) == 0 )
+    if( Queue_Length(&gReadyTask) < MAX_READY_TASK )
     {
         CreateTask();
     }
@@ -141,9 +148,26 @@ static void ReadyToRunning()
     {
         node = Queue_Remove(&gReadyTask);
         
+        ((TaskNode*)node)->task.current = 0;
+        
         Queue_Add(&gRunningTask, node);
     }
 }
+
+static void RunningToReady()
+{
+    TaskNode* tn = (TaskNode*)Queue_Front(&gRunningTask);
+    
+    if( !IsEqual(tn, (QueueNode*)&gIdleTask) )
+    {
+        if( tn->task.current == tn->task.total )
+        {
+            Queue_Remove(&gRunningTask);
+            Queue_Add(&gReadyTask, (QueueNode*)tn);
+        }
+    }
+}
+
 
 void TaskModInit()
 {
@@ -161,7 +185,7 @@ void TaskModInit()
     
     SetDescValue(AddrOff(gGdtInfo.entry, GDT_TASK_TSS_INDEX), (uint)&gTSS, sizeof(gTSS)-1, DA_386TSS + DA_DPL0);
     
-    InitTask(&gIdleTask.task, "IdleTask", IdleTask);
+    InitTask(&gIdleTask.task, 0, "IdleTask", IdleTask, 255);
     
     ReadyToRunning();
     
@@ -179,6 +203,8 @@ void LaunchTask()
 
 void Schedule()
 {
+    RunningToReady();
+    
     ReadyToRunning();
     
     CheckRunningTask();
