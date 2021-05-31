@@ -2,7 +2,7 @@
 
 org 0x9000
 
-jmp CODE16_SEGMENT
+jmp ENTRY_SEGMENT
 
 [section .gdt]
 ; GDT definition
@@ -11,7 +11,9 @@ GDT_ENTRY       :     Descriptor    0,            0,           0
 CODE32_DESC     :     Descriptor    0,    Code32SegLen - 1,    DA_C + DA_32
 VIDEO_DESC      :     Descriptor 0xB8000,     0x07FFF,         DA_DRWA + DA_32
 DATA32_DESC     :     Descriptor    0,    Data32SegLen - 1,    DA_DR + DA_32
-STACK_DESC      :     Descriptor    0,     TopOfStackInit,     DA_DRW + DA_32
+STACK32_DESC    :     Descriptor    0,     TopOfStack32,       DA_DRW + DA_32
+CODE16_DESC     :     Descriptor    0,        0xFFFF,          DA_C 
+UPDATE_DESC     :     Descriptor    0,        0xFFFF,          DA_DRW
 ; GDT end
 
 GdtLen    equ   $ - GDT_ENTRY
@@ -26,11 +28,12 @@ GdtPtr:
 Code32Selector    equ (0x0001 << 3) + SA_TIG + SA_RPL0
 VideoSelector     equ (0x0002 << 3) + SA_TIG + SA_RPL0
 Data32Selector    equ (0x0003 << 3) + SA_TIG + SA_RPL0
-StackSelector     equ (0x0004 << 3) + SA_TIG + SA_RPL0
-
+Stack32Selector   equ (0x0004 << 3) + SA_TIG + SA_RPL0
+Code16Selector    equ (0x0005 << 3) + SA_TIG + SA_RPL0
+UpdateSelector    equ (0x0006 << 3) + SA_TIG + SA_RPL0
 ; end of [section .gdt]
 
-TopOfStackInit    equ 0x7c00
+TopOfStack16    equ 0x7c00
 
 [section .dat]
 [bits 32]
@@ -44,12 +47,14 @@ Data32SegLen equ $ - DATA32_SEGMENT
 
 [section .s16]
 [bits 16]
-CODE16_SEGMENT:
+ENTRY_SEGMENT:
     mov ax, cs
     mov ds, ax
     mov es, ax
     mov ss, ax
-    mov sp, TopOfStackInit
+    mov sp, TopOfStack16
+    
+    mov [BACK_TO_REAL_MODE + 3], ax
     
     ; initialize GDT for 32 bits code segment
     mov esi, CODE32_SEGMENT
@@ -59,6 +64,16 @@ CODE16_SEGMENT:
     
     mov esi, DATA32_SEGMENT
     mov edi, DATA32_DESC
+    
+    call InitDescItem
+    
+    mov esi, STACK32_SEGMENT
+    mov edi, STACK32_DESC
+    
+    call InitDescItem
+    
+    mov esi, CODE16_SEGMENT
+    mov edi, CODE16_DESC
     
     call InitDescItem
     
@@ -88,6 +103,27 @@ CODE16_SEGMENT:
     ; 5. jump to 32 bits code
     jmp dword Code32Selector : 0
 
+BACK_ENTRY_SEGMENT:
+    mov ax, cs
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, TopOfStack16
+    
+    in al, 0x92
+    and al, 11111101b
+    out 0x92, al
+    
+    sti
+    
+    mov bp, HELLO_WORLD
+    mov cx, 12
+    mov dx, 0
+    mov ax, 0x1301
+    mov bx, 0x0007
+    int 0x10
+    
+    jmp $
 
 ; esi    --> code segment label
 ; edi    --> descriptor label
@@ -107,6 +143,26 @@ InitDescItem:
     
     ret
     
+
+[section .s16]
+[bits 16]
+CODE16_SEGMENT:
+    mov ax, UpdateSelector
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    
+    mov eax, cr0
+    and al, 11111110b
+    mov cr0, eax
+
+BACK_TO_REAL_MODE:    
+    jmp 0 : BACK_ENTRY_SEGMENT
+    
+Code16SegLen    equ    $ - CODE16_SEGMENT
+
     
 [section .s32]
 [bits 32]
@@ -114,8 +170,11 @@ CODE32_SEGMENT:
     mov ax, VideoSelector
     mov gs, ax
     
-    mov ax, StackSelector
+    mov ax, Stack32Selector
     mov ss, ax
+    
+    mov eax, TopOfStack32
+    mov esp, eax
     
     mov ax, Data32Selector
     mov ds, ax
@@ -134,7 +193,7 @@ CODE32_SEGMENT:
     
     call PrintString
     
-    jmp $
+    jmp Code16Selector : 0
 
 ; ds:ebp    --> string address
 ; bx        --> attribute
@@ -172,3 +231,11 @@ end:
     ret
     
 Code32SegLen    equ    $ - CODE32_SEGMENT
+
+[section .gs]
+[bits 32]
+STACK32_SEGMENT:
+    times 1024 * 4 db 0
+    
+Stack32SegLen equ $ - STACK32_SEGMENT
+TopOfStack32  equ Stack32SegLen - 1
