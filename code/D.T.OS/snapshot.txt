@@ -1,0 +1,25 @@
+D.T.OS
+GDT Entry: 0x000091D0
+GDT Size: 7
+IDT Entry: 0x00009210
+IDT Size: 256
+0x0000C288    0x0000C2B8
+0x0000C500    0x0000C530
+0x0000C778    0x0000C7A8
+0x0000C9F0    0x0000CA20
+0x0000CC68    0x0000CC98
+
+
+TaskA   Sß
+TaskB   8
+TaskC   w
+TaskD   )
+
+
+
+
+
+
+
+
+

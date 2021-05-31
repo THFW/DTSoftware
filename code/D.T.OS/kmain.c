@@ -22,6 +22,8 @@ void KMain()
     PrintIntDec((uint)gIdtInfo.size);
     PrintChar('\n');
     
+    AppModInit();
+    
     TaskModInit();
     
     IntModInit();

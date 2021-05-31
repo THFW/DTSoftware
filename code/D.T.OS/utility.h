@@ -20,5 +20,5 @@
 })
 
 void Delay(int n);
-
+char* StrCpy(char* dst, const char* src, int n);
 #endif
