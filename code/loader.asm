@@ -1,7 +1,9 @@
 %include "inc.asm"
 
-PageDirBase    equ    0x200000
-PageTblBase    equ    0x201000
+PageDirBase0    equ    0x200000
+PageTblBase0    equ    0x201000
+PageDirBase1    equ    0x300000
+PageTblBase1    equ    0x301000
 
 org 0x9000
 
@@ -15,8 +17,10 @@ CODE32_DESC     :     Descriptor        0,        Code32SegLen - 1,    DA_C + DA
 VIDEO_DESC      :     Descriptor     0xB8000,         0x07FFF,         DA_DRWA + DA_32
 DATA32_DESC     :     Descriptor        0,        Data32SegLen - 1,    DA_DRW + DA_32
 STACK32_DESC    :     Descriptor        0,         TopOfStack32,       DA_DRW + DA_32
-PAGE_DIR_DESC   :     Descriptor    PageDirBase,        4095,          DA_DRW + DA_32
-PAGE_TBL_DESC   :     Descriptor    PageTblBase,        1023,          DA_DRW + DA_LIMIT_4K + DA_32
+PAGE_DIR_DESC0  :     Descriptor    PageDirBase0,       4095,          DA_DRW + DA_32
+PAGE_TBL_DESC0  :     Descriptor    PageTblBase0,       1023,          DA_DRW + DA_LIMIT_4K + DA_32
+PAGE_DIR_DESC1  :     Descriptor    PageDirBase1,       4095,          DA_DRW + DA_32
+PAGE_TBL_DESC1  :     Descriptor    PageTblBase1,       1023,          DA_DRW + DA_LIMIT_4K + DA_32
 ; GDT end
 
 GdtLen    equ   $ - GDT_ENTRY
@@ -32,8 +36,10 @@ Code32Selector   equ (0x0001 << 3) + SA_TIG + SA_RPL0
 VideoSelector    equ (0x0002 << 3) + SA_TIG + SA_RPL0
 Data32Selector   equ (0x0003 << 3) + SA_TIG + SA_RPL0
 Stack32Selector  equ (0x0004 << 3) + SA_TIG + SA_RPL0
-PageDirSelector  equ (0x0005 << 3) + SA_TIG + SA_RPL0
-PageTblSelector  equ (0x0006 << 3) + SA_TIG + SA_RPL0
+PageDirSelector0 equ (0x0005 << 3) + SA_TIG + SA_RPL0
+PageTblSelector0 equ (0x0006 << 3) + SA_TIG + SA_RPL0
+PageDirSelector1 equ (0x0007 << 3) + SA_TIG + SA_RPL0
+PageTblSelector1 equ (0x0008 << 3) + SA_TIG + SA_RPL0
 ; end of [section .gdt]
 
 TopOfStack16    equ 0x7c00
@@ -121,7 +127,7 @@ InitDescItem:
     
 [section .s32]
 [bits 32]
-CODE32_SEGMENT:   
+CODE32_SEGMENT:
     mov ax, VideoSelector
     mov gs, ax
     
@@ -148,23 +154,43 @@ CODE32_SEGMENT:
     
     call PrintString
     
-    call SetupPage
+    mov eax, PageDirSelector0
+    mov ebx, PageTblSelector0
+    mov ecx, PageTblBase0
+    
+    call InitPageTable
+    
+    mov eax, PageDirSelector1
+    mov ebx, PageTblSelector1
+    mov ecx, PageTblBase1
+    
+    call InitPageTable
+    
+    mov eax, PageDirBase0
+    
+    call SwitchPageTable
+    
+    mov eax, PageDirBase1
+    
+    call SwitchPageTable
     
     jmp $
 
-;
-;
-SetupPage:
-    push eax
-    push ecx
-    push edi
+; eax --> page dir base selector
+; ebx --> page table base selector 
+; ecx --> page table base
+InitPageTable:
     push es
+    push eax  ; [esp + 12]
+    push ebx  ; [esp + 8]
+    push ecx  ; [esp + 4]
+    push edi  ; [esp]
     
-    mov ax, PageDirSelector
     mov es, ax
     mov ecx, 1024    ;  1K sub page tables
     mov edi, 0
-    mov eax, PageTblBase | PG_P | PG_USU | PG_RWW
+    mov eax, [esp + 4]
+    or  eax, PG_P | PG_USU | PG_RWW
     
     cld
     
@@ -173,7 +199,7 @@ stdir:
     add eax, 4096
     loop stdir
     
-    mov ax, PageTblSelector
+    mov ax, [esp + 8]
     mov es, ax
     mov ecx, 1024 * 1024   ; 1M pages
     mov edi, 0
@@ -186,18 +212,32 @@ sttbl:
     add eax, 4096
     loop sttbl
     
-    mov eax, PageDirBase
+    pop edi
+    pop ecx
+    pop ebx
+    pop eax
+    pop es
+    
+    ret   
+
+; eax --> page directory base
+SwitchPageTable:
+    push eax
+    
+    mov eax, cr0
+    and eax, 0x7FFFFFFF
+    mov cr0, eax
+    
+    mov eax, [esp]
     mov cr3, eax
     mov eax, cr0
     or  eax, 0x80000000
     mov cr0, eax
     
-    pop es
-    pop edi
-    pop ecx
     pop eax
     
-    ret   
+    ret
+
 
 ; ds:ebp    --> string address
 ; bx        --> attribute
