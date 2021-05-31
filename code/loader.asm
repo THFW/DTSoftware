@@ -6,12 +6,13 @@ jmp ENTRY_SEGMENT
 
 [section .gdt]
 ; GDT definition
-;                                     ∂Œª˘÷∑£¨           ∂ŒΩÁœﬁ£¨       ∂Œ Ù–‘
+;                                     ÊÆµÂü∫ÂùÄÔºå           ÊÆµÁïåÈôêÔºå       ÊÆµÂ±ûÊÄß
 GDT_ENTRY       :     Descriptor        0,                0,           0
 CODE32_DESC     :     Descriptor        0,        Code32SegLen - 1,    DA_C + DA_32
 VIDEO_DESC      :     Descriptor     0xB8000,         0x07FFF,         DA_DRWA + DA_32
 DATA32_DESC     :     Descriptor        0,        Data32SegLen - 1,    DA_DRW + DA_32
 STACK32_DESC    :     Descriptor        0,         TopOfStack32,       DA_DRW + DA_32
+SYSDAT32_DESC   :     Descriptor        0,        SysDat32SegLen -1,   DA_DR + DA_32
 ; GDT end
 
 GdtLen    equ   $ - GDT_ENTRY
@@ -27,9 +28,16 @@ Code32Selector   equ (0x0001 << 3) + SA_TIG + SA_RPL0
 VideoSelector    equ (0x0002 << 3) + SA_TIG + SA_RPL0
 Data32Selector   equ (0x0003 << 3) + SA_TIG + SA_RPL0
 Stack32Selector  equ (0x0004 << 3) + SA_TIG + SA_RPL0
+SysDat32Selector equ (0x0005 << 3) + SA_TIG + SA_RPL0
 ; end of [section .gdt]
 
 TopOfStack16    equ 0x7c00
+
+[section .d16]
+DATA16_SEGMENT:
+    MEM_ERR_MSG      db  "[FAILED] memory check error..."
+    MEM_ERR_MSG_LEN  equ $ - MEM_ERR_MSG
+Data16SegLen   equ $ - DATA16_SEGMENT
 
 [section .dat]
 [bits 32]
@@ -41,8 +49,16 @@ DATA32_SEGMENT:
 
 Data32SegLen equ $ - DATA32_SEGMENT
 
-;
-MEM_SIZE   times 4   db  0
+[section .sysdat]
+SYSDAT32_SEGMENT:
+    MEM_SIZE              times    4      db  0      ; int mem_size = 0;
+    MEM_SIZE_OFFSET       equ      MEM_SIZE - $$
+    MEM_ARDS_NUM          times    4      db  0      ; int mem_ards_num = 0;
+    MEM_ARDS_NUM_OFFSET   equ      MEM_ARDS_NUM - $$
+    MEM_ARDS              times 64 * 20   db  0      ; int mem_ards = 0;
+    MEM_ARDS_OFFSET       equ      MEM_ARDS - $$
+
+SysDat32SegLen  equ  $ - SYSDAT32_SEGMENT
 
 [section .s16]
 [bits 16]
@@ -53,8 +69,11 @@ ENTRY_SEGMENT:
     mov ss, ax
     mov sp, TopOfStack16
     
-    ; get hardware memory infomation
-    call GetMemSize
+    ; get system memory information
+    call InitSysMemBuf
+    
+    cmp eax, 0
+    jnz CODE16_MEM_ERROR
     
     ; initialize GDT for 32 bits code segment
     mov esi, CODE32_SEGMENT
@@ -69,6 +88,11 @@ ENTRY_SEGMENT:
     
     mov esi, STACK32_SEGMENT
     mov edi, STACK32_DESC
+    
+    call InitDescItem
+    
+    mov esi, SYSDAT32_SEGMENT
+    mov edi, SYSDAT32_DESC
     
     call InitDescItem
     
@@ -98,7 +122,21 @@ ENTRY_SEGMENT:
     ; 5. jump to 32 bits code
     jmp dword Code32Selector : 0
 
+CODE16_MEM_ERROR:
+    mov bp, MEM_ERR_MSG
+    mov cx, MEM_ERR_MSG_LEN
+    call Print
+    jmp $
 
+; es:bp --> string address
+; cx    --> string length
+Print:
+    mov dx, 0
+    mov ax, 0x1301
+    mov bx, 0x0007
+    int 0x10
+    ret
+    
 ; esi    --> code segment label
 ; edi    --> descriptor label
 InitDescItem:
@@ -159,7 +197,66 @@ getok:
     pop eax
     
     ret
-    
+
+; return 
+;    eax  --> 0 : succeed      1 : failed
+InitSysMemBuf: 
+     push edi
+     push ebx
+     push ecx
+     push edx
+     
+     call GetMemSize
+     
+     mov edi, MEM_ARDS
+     mov ebx, 0
+     
+doloop:
+     mov eax, 0xE820
+     mov edx, 0x534D4150
+     mov ecx, 20
+     
+     int 0x15
+     
+     jc memerr
+     
+     cmp dword [edi + 16], 1
+     jne next
+     
+     mov eax, [edi]
+     add eax, [edi + 8]
+     
+     cmp dword [MEM_SIZE], eax
+     jnb next
+     
+     mov dword [MEM_SIZE], eax
+
+next:
+     add edi, 20
+     inc dword [MEM_ARDS_NUM]
+
+     cmp ebx, 0
+     jne doloop
+     
+     mov eax, 0
+     
+     jmp memok
+
+memerr:
+     mov dword [MEM_SIZE], 0
+     mov dword [MEM_ARDS_NUM], 0
+     mov eax, 1
+     
+memok:     
+     
+     pop edx
+     pop ecx
+     pop ebx
+     pop edi
+     
+     ret
+     
+     
 [section .s32]
 [bits 32]
 CODE32_SEGMENT:   
