@@ -72,11 +72,24 @@ start:
 	
 	call ReadSector
 	
-	mov cx, [EntryItem + 0x1A]
+	mov dx, [EntryItem + 0x1A]
+	mov si, BaseOfLoader
 	
-	call FatVec
-	
-	jmp last
+loading:
+    mov ax, dx
+    add ax, 31
+    mov cx, 1
+    push dx
+    push bx
+    mov bx, si
+    call ReadSector
+    pop bx
+    pop cx
+    call FatVec
+    cmp dx, 0xFF7
+    jnb BaseOfLoader
+    add si, 512
+    jmp loading
 	
 output:	
     mov bp, MsgStr
@@ -148,10 +161,6 @@ return:
 ; es:di --> destination
 ; cx    --> length
 MemCpy:
-    push si
-    push di
-    push cx
-    push ax
     
     cmp si, di
     
@@ -185,10 +194,6 @@ etob:
     jmp etob
 
 done:   
-    pop ax
-    pop cx
-    pop di
-    pop si
     ret
 
 ; es:bx --> root entry offset address
@@ -199,8 +204,6 @@ done:
 ;     (dx !=0 ) ? exist : noexist
 ;        exist --> bx is the target entry
 FindEntry:
-    push di
-    push bp
     push cx
     
     mov dx, [BPB_RootEntCnt]
@@ -211,7 +214,9 @@ find:
     jz noexist
     mov di, bx
     mov cx, [bp]
+    push si
     call MemCmp
+    pop si
     cmp cx, 0
     jz exist
     add bx, 32
@@ -221,8 +226,6 @@ find:
 exist:
 noexist: 
     pop cx
-    pop bp
-    pop di
        
     ret
 
@@ -233,10 +236,7 @@ noexist:
 ; return:
 ;        (cx == 0) ? equal : noequal
 MemCmp:
-    push si
-    push di
-    push ax
-    
+
 compare:
     cmp cx, 0
     jz equal
@@ -252,10 +252,7 @@ goon:
     
 equal: 
 noequal:   
-    pop ax
-    pop di
-    pop si
-    
+
     ret
 
 ; es:bp --> string address
@@ -269,15 +266,10 @@ Print:
 
 ; no parameter
 ResetFloppy:
-    push ax
-    push dx
     
     mov ah, 0x00
     mov dl, [BS_DrvNum]
     int 0x13
-    
-    pop dx
-    pop ax
     
     ret
 
@@ -285,10 +277,6 @@ ResetFloppy:
 ; cx    --> number of sector
 ; es:bx --> target address
 ReadSector:
-    push bx
-    push cx
-    push dx
-    push ax
     
     call ResetFloppy
     
@@ -313,11 +301,6 @@ ReadSector:
 read:    
     int 0x13
     jc read
-    
-    pop ax
-    pop dx
-    pop cx
-    pop bx
     
     ret
 
