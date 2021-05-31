@@ -8,10 +8,13 @@ jmp ENTRY_SEGMENT
 ; GDT definition
 ;                                     段基址，           段界限，       段属性
 GDT_ENTRY       :     Descriptor        0,                0,           0
-CODE32_DESC     :     Descriptor        0,        Code32SegLen - 1,    DA_C + DA_32
-VIDEO_DESC      :     Descriptor     0xB8000,         0x07FFF,         DA_DRWA + DA_32
-DATA32_DESC     :     Descriptor        0,        Data32SegLen - 1,    DA_DRW + DA_32
-STACK32_DESC    :     Descriptor        0,         TopOfStack32,       DA_DRW + DA_32
+CODE32_DESC     :     Descriptor        0,        Code32SegLen - 1,    DA_C + DA_32 + DA_DPL3
+VIDEO_DESC      :     Descriptor     0xB8000,         0x07FFF,         DA_DRWA + DA_32 + DA_DPL3
+DATA32_DESC     :     Descriptor        0,        Data32SegLen - 1,    DA_DRW + DA_32 + DA_DPL3
+STACK32U_DESC   :     Descriptor        0,         TopOfStack32U,      DA_DRW + DA_32 + DA_DPL3
+STACK32K_DESC   :     Descriptor        0,         TopOfStack32K,      DA_DRW + DA_32 + DA_DPL0
+TSS_DESC        :     Descriptor        0,            TSSLen - 1,      DA_386TSS + DA_DPL0
+KERNEL32_DESC   :     Descriptor        0,      Kernel32SegLen - 1,    DA_C + DA_32 + DA_DPL0
 ; GDT end
 
 GdtLen    equ   $ - GDT_ENTRY
@@ -22,10 +25,13 @@ GdtPtr:
           
 ; GDT Selector
 
-Code32Selector   equ (0x0001 << 3) + SA_TIG + SA_RPL0
-VideoSelector    equ (0x0002 << 3) + SA_TIG + SA_RPL0
-Data32Selector   equ (0x0003 << 3) + SA_TIG + SA_RPL0
-Stack32Selector  equ (0x0004 << 3) + SA_TIG + SA_RPL0
+Code32Selector   equ (0x0001 << 3) + SA_TIG + SA_RPL3
+VideoSelector    equ (0x0002 << 3) + SA_TIG + SA_RPL3
+Data32Selector   equ (0x0003 << 3) + SA_TIG + SA_RPL3
+Stack32USelector equ (0x0004 << 3) + SA_TIG + SA_RPL3
+Stack32KSelector equ (0x0005 << 3) + SA_TIG + SA_RPL0
+TSSSelector      equ (0x0006 << 3) + SA_TIG + SA_RPL0
+Kernel32Selector equ (0x0007 << 3) + SA_TIG + SA_RPL0
 ; end of [section .gdt]
 
 [section .idt]
@@ -35,19 +41,19 @@ IDT_ENTRY:
 ; IDT definition
 ;                        Selector,           Offset,       DCount,    Attribute
 %rep 32
-              Gate    Code32Selector,    DefaultHandler,   0,         DA_386IGate
+              Gate    Kernel32Selector,    DefaultHandler,   0,         DA_386IGate + DA_DPL3
 %endrep
 
-Int0x20   :   Gate    Code32Selector,    TimerHandler,     0,         DA_386IGate
+Int0x20   :   Gate    Kernel32Selector,    TimerHandler,     0,         DA_386IGate + DA_DPL3
 
 %rep 95
-              Gate    Code32Selector,    DefaultHandler,   0,         DA_386IGate
+              Gate    Kernel32Selector,    DefaultHandler,   0,         DA_386IGate + DA_DPL3
 %endrep
 
-Int0x80   :   Gate    Code32Selector,    Int0x80Handler,   0,         DA_386IGate
+Int0x80   :   Gate    Kernel32Selector,    Int0x80Handler,   0,         DA_386IGate + DA_DPL3
 
 %rep 127
-              Gate    Code32Selector,    DefaultHandler,   0,         DA_386IGate
+              Gate    Kernel32Selector,    DefaultHandler,   0,         DA_386IGate + DA_DPL3
 %endrep
 
 IdtLen    equ    $ - IDT_ENTRY
@@ -59,6 +65,23 @@ IdtPtr:
 ; end of [section .idt]
 
 TopOfStack16    equ 0x7c00
+
+[section .tss]
+[bits 32]
+TSS_SEGMENT:
+    dd    0
+    dd    TopOfStack32K       ; 0
+    dd    Stack32KSelector    ;
+    dd    0                   ; 1
+    dd    0                   ;
+    dd    0                   ; 2
+    dd    0                   ;
+    times 4 * 18 dd 0
+    dw    0
+    dw    $ - TSS_SEGMENT + 2
+    db    0xFF
+    
+TSSLen    equ   $ - TSS_SEGMENT
 
 [section .dat]
 [bits 32]
@@ -90,8 +113,23 @@ ENTRY_SEGMENT:
     
     call InitDescItem
     
-    mov esi, STACK32_SEGMENT
-    mov edi, STACK32_DESC
+    mov esi, STACK32U_SEGMENT
+    mov edi, STACK32U_DESC
+    
+    call InitDescItem
+    
+    mov esi, STACK32K_SEGMENT
+    mov edi, STACK32K_DESC
+    
+    call InitDescItem
+    
+    mov esi, TSS_SEGMENT
+    mov edi, TSS_DESC
+    
+    call InitDescItem
+    
+    mov esi, KERNEL32_SEGMENT
+    mov edi, KERNEL32_DESC
     
     call InitDescItem
     
@@ -112,10 +150,20 @@ ENTRY_SEGMENT:
     ; 1. load GDT
     lgdt [GdtPtr]
     
-    ; 2. close interrupt and load IDT
+    ; 2. close interrupt
+    ;    load IDT
+    ;    set IOPL to 3
     cli 
     
     lidt [IdtPtr]
+    
+    pushf
+    pop eax
+    
+    or eax, 0x3000
+    
+    push eax
+    popf
     
     ; 3. open A20
     in al, 0x92
@@ -127,8 +175,17 @@ ENTRY_SEGMENT:
     or eax, 0x01
     mov cr0, eax
     
-    ; 5. jump to 32 bits code
-    jmp dword Code32Selector : 0
+    ; 5. load TSS
+    mov ax, TSSSelector
+    ltr ax
+    
+    ; 6. jump to 32 bits code
+    ; jmp dword Code32Selector : 0
+    push Stack32USelector
+    push TopOfStack32U
+    push Code32Selector
+    push 0
+    retf
 
 
 ; esi    --> code segment label
@@ -156,43 +213,23 @@ CODE32_SEGMENT:
     mov ax, VideoSelector
     mov gs, ax
     
-    mov ax, Stack32Selector
+    mov ax, Stack32USelector
     mov ss, ax
     
-    mov eax, TopOfStack32
+    mov eax, TopOfStack32U
     mov esp, eax
     
     mov ax, Data32Selector
     mov ds, ax
     
-    call Init8259A
-    
-    mov ax, 0xFF
-    mov dx, MASTER_IMR_PORT
-    
-    call WriteIMR
-    
-    mov ax, 0xFF
-    mov dx, SLAVE_IMR_PORT
-    
-    call WriteIMR
     
     mov ebp, DTOS_OFFSET
-    mov bx, 0x0C
     mov dh, 12
     mov dl, 33
     
-    call PrintString
+    call Printf
     
-    
-    mov ebp, INT_80H_OFFSET
-    mov bx, 0x0C
-    mov dh, 13
-    mov dl, 32
-    
-    int 0x80
-    
-    sti
+    call InitDevInt
     
     call EnableTimer
     
@@ -200,26 +237,108 @@ CODE32_SEGMENT:
 
 ;
 ;
+InitDevInt:
+    push ax
+    
+    mov ax, 0
+    
+    int 0x80
+    
+    sti
+    
+    pop ax
+    ret
+    
+; ds:ebp    --> string address
+; dx        --> dh : row, dl : col  
+Printf:
+    push ax
+    push bx
+    
+    mov ax, 1
+    mov bx, 0x0C
+    
+    int 0x80
+    
+    pop bx
+    pop ax
+    ret
+    
+;
+;
 EnableTimer:
+    push ax
+    
+    mov ax, 2
+    
+    int 0x80
+    
+    pop ax
+    ret
+    
+Code32SegLen    equ    $ - CODE32_SEGMENT
+
+[section .knl]
+[bits 32]
+KERNEL32_SEGMENT:         
+;
+;
+DefaultHandlerFunc:
+    iret
+    
+DefaultHandler    equ    DefaultHandlerFunc - $$
+    
+;
+;
+Int0x80HandlerFunc:
+ax0:
+    cmp ax, 0
+    jnz ax1
+    call InitDevIntFunc
+    iret
+ax1:
+    cmp ax, 1
+    jnz ax2
+    call PrintString
+    iret
+ax2:
+    cmp ax, 2
+    jnz ax3
+    call EnableTimerFunc
+    iret
+ax3:
+    iret
+    
+Int0x80Handler    equ    Int0x80HandlerFunc - $$
+
+;
+;
+TimerHandlerFunc:
     push ax
     push dx
     
-    mov ah, 0x0C
+    mov ax, [gs:((80 * 14 + 36) * 2)]
+    
+    cmp al, '9'
+    je throtate
+    inc al
+    jmp thshow
+
+throtate:
     mov al, '0'
+    
+thshow:
     mov [gs:((80 * 14 + 36) * 2)], ax
     
-    mov dx, MASTER_IMR_PORT
-    
-    call ReadIMR
-    
-    and ax, 0xFE
-    
-    call WriteIMR
+    mov dx, MASTER_OCW2_PORT
+    call WriteEOI
     
     pop dx
     pop ax
     
-    ret
+    iret
+    
+TimerHandler    equ    TimerHandlerFunc - $$
 
 ;
 ;
@@ -316,50 +435,51 @@ WriteEOI:
     pop ax
     
     ret
-       
-;
-;
-DefaultHandlerFunc:
-    iret
-    
-DefaultHandler    equ    DefaultHandlerFunc - $$
-    
-;
-;
-Int0x80HandlerFunc:
-    call PrintString
-    iret
-    
-Int0x80Handler    equ    Int0x80HandlerFunc - $$
 
 ;
 ;
-TimerHandlerFunc:
+EnableTimerFunc:
     push ax
     push dx
     
-    mov ax, [gs:((80 * 14 + 36) * 2)]
-    
-    cmp al, '9'
-    je throtate
-    inc al
-    jmp thshow
-
-throtate:
+    mov ah, 0x0C
     mov al, '0'
-    
-thshow:
     mov [gs:((80 * 14 + 36) * 2)], ax
     
-    mov dx, MASTER_OCW2_PORT
-    call WriteEOI
+    mov dx, MASTER_IMR_PORT
+    
+    call ReadIMR
+    
+    and ax, 0xFE
+    
+    call WriteIMR
     
     pop dx
     pop ax
     
-    iret
+    ret
     
-TimerHandler    equ    TimerHandlerFunc - $$
+;
+;
+InitDevIntFunc:
+    push ax
+    push dx
+    
+    call Init8259A
+    
+    mov ax, 0xFF
+    mov dx, MASTER_IMR_PORT
+    
+    call WriteIMR
+    
+    mov ax, 0xFF
+    mov dx, SLAVE_IMR_PORT
+    
+    call WriteIMR
+    
+    pop dx
+    pop ax
+    ret
 
 ; ds:ebp    --> string address
 ; bx        --> attribute
@@ -395,13 +515,21 @@ end:
     pop ebp
     
     ret
-    
-Code32SegLen    equ    $ - CODE32_SEGMENT
 
-[section .gs]
+Kernel32SegLen    equ    $ - KERNEL32_SEGMENT
+
+[section .gsu]
 [bits 32]
-STACK32_SEGMENT:
+STACK32U_SEGMENT:
     times 1024 * 4 db 0
     
-Stack32SegLen equ $ - STACK32_SEGMENT
-TopOfStack32  equ Stack32SegLen - 1
+Stack32USegLen equ $ - STACK32U_SEGMENT
+TopOfStack32U  equ Stack32USegLen - 1
+
+[section .gsk]
+[bits 32]
+STACK32K_SEGMENT:
+    times 1024 * 4 db 0
+    
+Stack32KSegLen equ $ - STACK32K_SEGMENT
+TopOfStack32K  equ Stack32KSegLen - 1
