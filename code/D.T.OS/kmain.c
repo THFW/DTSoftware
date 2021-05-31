@@ -2,6 +2,9 @@
 #include "screen.h"
 #include "global.h"
 
+void (* const InitInterrupt)() = NULL;
+void (* const EnableTimer)() = NULL;
+void (* const SendEOI)(uint port) = NULL;
 Task p = {0};
 
 void Delay(int n)
@@ -40,34 +43,53 @@ void TaskA()
     }
 }
 
+void TimerHandler()
+{
+    static uint i = 0;
+    
+    i = (i + 1) % 10;
+    
+    SetPrintPos(0, 13);
+        
+    PrintString("Timer: ");
+    
+    if( i == 0 )
+    {
+        static uint j = 0;
+        
+        SetPrintPos(0, 13);
+        
+        PrintString("Timer: ");
+        
+        SetPrintPos(8, 13);
+        
+        PrintIntDec(j++);
+    }
+    
+    SendEOI(MASTER_EOI_PORT);
+    
+    asm volatile("leave\n""iret\n");
+}
+
 void KMain()
 {
     int n = PrintString("D.T.OS\n");
-    uint base = 0;
-    uint limit = 0;
-    ushort attr = 0;
-    int i = 0;
+    uint temp = 0;
     
     PrintString("GDT Entry: ");
     PrintIntHex((uint)gGdtInfo.entry);
     PrintChar('\n');
     
-    for(i=0; i<gGdtInfo.size; i++)
-    {
-        GetDescValue(gGdtInfo.entry + i, &base, &limit, &attr);
+    PrintString("GDT Size: ");
+    PrintIntDec((uint)gGdtInfo.size);
+    PrintChar('\n');
     
-        PrintIntHex(base);
-        PrintString("    ");
+    PrintString("IDT Entry: ");
+    PrintIntHex((uint)gIdtInfo.entry);
+    PrintChar('\n');
     
-        PrintIntHex(limit);
-        PrintString("    ");
-    
-        PrintIntHex(attr);
-        PrintChar('\n');
-    }
-    
-    PrintString("RunTask: ");
-    PrintIntHex((uint)RunTask);
+    PrintString("IDT Size: ");
+    PrintIntDec((uint)gIdtInfo.size);
     PrintChar('\n');
     
     p.rv.cs = LDT_CODE32_SELECTOR;
@@ -79,10 +101,10 @@ void KMain()
     
     p.rv.esp = (uint)p.stack + sizeof(p.stack);
     p.rv.eip = (uint)TaskA;
-    p.rv.eflags = 0x3002;
+    p.rv.eflags = 0x3202;
     
     p.tss.ss0 = GDT_DATA32_FLAT_SELECTOR;
-    p.tss.esp0 = 0;
+    p.tss.esp0 = 0x9000;
     p.tss.iomb = sizeof(p.tss);
     
     SetDescValue(p.ldt + LDT_VIDEO_INDEX,  0xB8000, 0x07FFF, DA_DRWA + DA_32 + DA_DPL3);
@@ -95,10 +117,11 @@ void KMain()
     SetDescValue(&gGdtInfo.entry[GDT_TASK_LDT_INDEX], (uint)&p.ldt, sizeof(p.ldt)-1, DA_LDT + DA_DPL0);
     SetDescValue(&gGdtInfo.entry[GDT_TASK_TSS_INDEX], (uint)&p.tss, sizeof(p.tss)-1, DA_386TSS + DA_DPL0);
     
-    PrintString("Stack Bottom: ");
-    PrintIntHex((uint)p.stack);
-    PrintString("    Stack Top: ");
-    PrintIntHex((uint)p.stack + sizeof(p.stack));
+    SetIntHandler(gIdtInfo.entry + 0x20, (uint)TimerHandler);
+    
+    InitInterrupt();
+    
+    EnableTimer();
     
     RunTask(&p);
 }

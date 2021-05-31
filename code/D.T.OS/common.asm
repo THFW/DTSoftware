@@ -8,11 +8,14 @@ BaseOfSharedMemory   equ    0xA000
 
 
 ; Shared Value Address
-GdtEntry         equ       BaseOfSharedMemory + 0
-GdtSize          equ       BaseOfSharedMemory + 4
-IdtEntry         equ       BaseOfSharedMemory + 8
-IdtSize          equ       BaseOfSharedMemory + 12
-RunTaskEntry     equ       BaseOfSharedMemory + 16
+GdtEntry             equ       BaseOfSharedMemory + 0
+GdtSize              equ       BaseOfSharedMemory + 4
+IdtEntry             equ       BaseOfSharedMemory + 8
+IdtSize              equ       BaseOfSharedMemory + 12
+RunTaskEntry         equ       BaseOfSharedMemory + 16
+InitInterruptEntry   equ       BaseOfSharedMemory + 20
+EnableTimerEntry     equ       BaseOfSharedMemory + 24
+SendEOIEntry         equ       BaseOfSharedMemory + 28
 
 ; PIC-8259A Ports 
 MASTER_ICW1_PORT                        equ     0x20
