@@ -6,6 +6,7 @@
 #define MAX_TASK_NUM        4
 #define MAX_RUNNING_TASK    2
 #define MAX_READY_TASK      (MAX_TASK_NUM - MAX_RUNNING_TASK)
+#define MAX_TASK_BUFF_NUM   (MAX_TASK_NUM + 1)
 #define PID_BASE            0x10
 
 static AppInfo* (*GetAppToRun)(uint index) = NULL;
@@ -15,14 +16,12 @@ void (* const RunTask)(volatile Task* pt) = NULL;
 void (* const LoadTask)(volatile Task* pt) = NULL;
 
 volatile Task* gCTaskAddr = NULL;
-// static TaskNode gTaskBuff[MAX_TASK_NUM] = {0};
-static TaskNode* gTaskBuff = NULL;
+static TaskNode gTaskBuff[MAX_TASK_BUFF_NUM] = {0};
 static Queue gFreeTaskNode = {0};
 static Queue gReadyTask = {0};
 static Queue gRunningTask = {0};
 static Queue gWaittingTask = {0};
 static TSS gTSS = {0};
-// static TaskNode gIdleTask = {0};
 static TaskNode* gIdleTask = NULL;
 static uint gAppToRunIndex = 0;
 static uint gPid = PID_BASE;
@@ -55,7 +54,7 @@ static void InitTask(Task* pt, uint id, const char* name, void(*entry)(), ushort
     pt->rv.fs = LDT_DATA32_SELECTOR;
     pt->rv.ss = LDT_DATA32_SELECTOR;
     
-    pt->rv.esp = (uint)pt->stack + sizeof(pt->stack);
+    pt->rv.esp = (uint)pt->stack + AppStackSize;
     pt->rv.eip = (uint)TaskEntry;
     pt->rv.eflags = 0x3202;
     
@@ -67,8 +66,8 @@ static void InitTask(Task* pt, uint id, const char* name, void(*entry)(), ushort
     StrCpy(pt->name, name, sizeof(pt->name)-1);
     
     SetDescValue(AddrOff(pt->ldt, LDT_VIDEO_INDEX),  0xB8000, 0x07FFF, DA_DRWA + DA_32 + DA_DPL3);
-    SetDescValue(AddrOff(pt->ldt, LDT_CODE32_INDEX), 0x00,    0x4FFFF, DA_C + DA_32 + DA_DPL3);
-    SetDescValue(AddrOff(pt->ldt, LDT_DATA32_INDEX), 0x00,    0x4FFFF, DA_DRW + DA_32 + DA_DPL3);
+    SetDescValue(AddrOff(pt->ldt, LDT_CODE32_INDEX), 0x00,    PageDirBase - 1, DA_C + DA_32 + DA_DPL3);
+    SetDescValue(AddrOff(pt->ldt, LDT_DATA32_INDEX), 0x00,    PageDirBase - 1, DA_DRW + DA_32 + DA_DPL3);
     
     pt->ldtSelector = GDT_TASK_LDT_SELECTOR;
     pt->tssSelector = GDT_TASK_TSS_SELECTOR;
@@ -165,8 +164,14 @@ static void RunningToReady()
 void TaskModInit()
 {
     int i = 0;
+    byte* pStack = (byte*)(PageDirBase - (AppStackSize * MAX_TASK_BUFF_NUM));
     
-    gTaskBuff = (void*)0x40000;
+    for(i=0; i<MAX_TASK_BUFF_NUM; i++)
+    {
+        TaskNode* tn = (void*)AddrOff(gTaskBuff, i);
+        
+        tn->task.stack = (void*)AddrOff(pStack, i * AppStackSize);
+    }
     
     gIdleTask = (void*)AddrOff(gTaskBuff, MAX_TASK_NUM);
     

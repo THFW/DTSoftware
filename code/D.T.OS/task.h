@@ -47,7 +47,7 @@ typedef struct
     ushort     current;
     ushort     total;
     char       name[8]; 
-    byte       stack[512];
+    byte*      stack;
 } Task;
 
 typedef struct
