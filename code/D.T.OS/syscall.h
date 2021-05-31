@@ -10,6 +10,7 @@ enum
 };
 
 void Exit();
+void Wait(const char* name);
 
 uint CreateMutex(uint type);
 void EnterCritical(uint mutex);

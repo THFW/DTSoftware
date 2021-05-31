@@ -46,7 +46,8 @@ typedef struct
     uint       id;
     ushort     current;
     ushort     total;
-    char       name[8]; 
+    char       name[16]; 
+    Queue      wait;
     byte*      stack;
 } Task;
 
@@ -68,7 +69,9 @@ extern void (* const LoadTask)(volatile Task* pt);
 void TaskModInit();
 void LaunchTask();
 void Schedule();
+void TaskCallHandler(uint cmd, uint param1, uint param2);
 void MtxSchedule(uint action);
 void KillTask();
+void WaitTask(const char* name);
 
 #endif
