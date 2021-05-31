@@ -4,8 +4,6 @@ global _start
 global AppModInit
 
 extern AppMain
-extern GetAppToRun
-extern GetAppNum
 extern MemModInit
 
 [section .text]

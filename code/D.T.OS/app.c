@@ -14,12 +14,7 @@ void TaskD();
 void CookRice();
 void CookDish();
 void HaveDinner();
-/*
-void RegApp(const char* name, void(*tmain)(), byte pri)
-{
-    
-}
-*/
+
 void AppMain()
 {
     // RegApp("Task A", TaskA, 255);
@@ -31,12 +26,8 @@ void AppMain()
     // RegApp("CookDish", CookDish, 255);
     // RegApp("HaveDinner", HaveDinner, 255);
     
-    int* p = (int*)0x80000;
-    
-    *p = 0;
-    
-    SetPrintPos(0, 10);
-    PrintString("AppMain() : Hello D.T.OS!\n");
+    // RunDemo1();
+    // RunDemo2();
 }
 
 
