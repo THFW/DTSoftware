@@ -8,6 +8,8 @@ void (* const SendEOI)(uint port) = NULL;
 
 void IntModInit()
 {
+    SetIntHandler(AddrOff(gIdtInfo.entry, 0x0D), (uint)SegmentFaultHandlerEntry);
+    SetIntHandler(AddrOff(gIdtInfo.entry, 0x0E), (uint)PageFaultHandlerEntry);
     SetIntHandler(AddrOff(gIdtInfo.entry, 0x20), (uint)TimerHandlerEntry);
     SetIntHandler(AddrOff(gIdtInfo.entry, 0x80), (uint)SysCallHandlerEntry);
     

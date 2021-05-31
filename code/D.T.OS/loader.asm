@@ -21,7 +21,7 @@ CODE32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_C
 DATA32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_DRW + DA_32 + DA_DPL0
 TASK_LDT_DESC        :     Descriptor    0,            0,                   0
 TASK_TSS_DESC        :     Descriptor    0,            0,                   0
-PAGE_DIR_DESC        :     Descriptor    PageDirBase,  4095,                DA_DRW + DA_LIMIT_4K + DA_32
+PAGE_DIR_DESC        :     Descriptor    PageDirBase,  4095,                DA_DRW + DA_32
 PAGE_TBL_DESC        :     Descriptor    PageTblBase,  1023,                DA_DRW + DA_LIMIT_4K + DA_32
 ; GDT end
 

@@ -2,6 +2,8 @@
 #include "interrupt.h"
 #include "task.h"
 
+extern volatile Task* gCTaskAddr;
+
 void TimerHandler()
 {
     static uint i = 0;
@@ -22,4 +24,24 @@ void SysCallHandler(ushort ax)   // __cdecl__
     {
         KillTask();
     }
+}
+
+void PageFaultHandler()
+{
+    SetPrintPos(0, 6);
+    
+    PrintString("Page Fault: kill ");
+    PrintString(gCTaskAddr->name);
+    
+    KillTask();
+}
+
+void SegmentFaultHandler()
+{
+    SetPrintPos(0, 6);
+    
+    PrintString("Segment Fault: kill ");
+    PrintString(gCTaskAddr->name);
+    
+    KillTask();
 }
