@@ -56,12 +56,19 @@ typedef struct
     Task task;
 } TaskNode;
 
+enum
+{
+    WAIT,
+    NOTIFY
+};
+
 extern void (* const RunTask)(volatile Task* pt);
 extern void (* const LoadTask)(volatile Task* pt);
 
 void TaskModInit();
 void LaunchTask();
 void Schedule();
+void MtxSchedule(uint action);
 void KillTask();
 
 #endif
