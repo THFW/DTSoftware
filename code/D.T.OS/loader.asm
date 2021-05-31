@@ -18,6 +18,8 @@ CODE32_DESC          :     Descriptor    0,            Code32SegLen - 1,    DA_C
 VIDEO_DESC           :     Descriptor    0xB8000,      0x07FFF,             DA_DRWA + DA_32 + DA_DPL0
 CODE32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_C + DA_32 + DA_DPL0
 DATA32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_DRW + DA_32 + DA_DPL0
+TASK_LDT_DESC        :     Descriptor    0,            0,                   0
+TASK_TSS_DESC        :     Descriptor    0,            0,                   0
 ; GDT end
 
 GdtLen    equ   $ - GDT_ENTRY
@@ -122,11 +124,39 @@ InitDescItem:
 ;
 ;
 StoreGlobal:
+    mov dword [RunTaskEntry], RunTask
+    
     mov eax, dword [GdtPtr + 2]
     mov dword [GdtEntry], eax
     
     mov dword [GdtSize], GdtLen / 8
+    
     ret
+    
+[section .gfunc]
+[bits 32]
+;
+;  parameter  ===> Task* pt
+RunTask:
+    push ebp
+    mov ebp, esp
+    
+    mov esp, [ebp + 8]
+    
+    lldt word [esp + 200]
+    ltr word [esp + 202]
+    
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    
+    popad
+    
+    add esp, 4
+    
+    iret
+     
     
 [section .s32]
 [bits 32]
