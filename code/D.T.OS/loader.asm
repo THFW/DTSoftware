@@ -289,6 +289,18 @@ RunTask:
     
     add esp, 4
     
+    mov dx, MASTER_IMR_PORT
+    
+    in ax, dx
+    
+    %rep 5
+    nop
+    %endrep
+    
+    and ax, 0xFE
+    
+    out dx, al
+    
     iret
     
 ; void LoadTask(Task* pt);

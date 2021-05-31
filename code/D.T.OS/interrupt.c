@@ -11,8 +11,6 @@ void IntModInit()
     SetIntHandler(AddrOff(gIdtInfo.entry, 0x20), (uint)TimerHandlerEntry);
     
     InitInterrupt();
-    
-    EnableTimer();
 }
 
 int SetIntHandler(Gate* pGate, uint ifunc)

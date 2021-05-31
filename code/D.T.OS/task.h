@@ -3,6 +3,7 @@
 #define TASK_H
 
 #include "kernel.h"
+#include "queue.h"
 
 typedef struct {
     uint gs;
@@ -45,6 +46,12 @@ typedef struct
     char       name[8]; 
     byte       stack[512];
 } Task;
+
+typedef struct
+{
+    QueueNode head;
+    Task task;
+} TaskNode;
 
 extern void (* const RunTask)(volatile Task* pt);
 extern void (* const LoadTask)(volatile Task* pt);
