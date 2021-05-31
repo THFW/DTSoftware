@@ -39,6 +39,6 @@ extern IdtInfo gIdtInfo;
 
 int SetDescValue(Descriptor* pDesc, uint base, uint limit, ushort attr);
 int GetDescValue(Descriptor* pDesc, uint* pBase, uint* pLimit, ushort* pAttr);
-
+void ConfigPageTable();
 
 #endif

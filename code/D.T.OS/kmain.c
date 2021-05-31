@@ -30,6 +30,8 @@ void KMain()
     
     IntModInit();
     
+    ConfigPageTable();
+    
     LaunchTask();
     
 }

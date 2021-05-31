@@ -34,4 +34,20 @@ int GetDescValue(Descriptor* pDesc, uint* pBase, uint* pLimit, ushort* pAttr)
     return ret;
 }
 
+void ConfigPageTable()
+{
+    uint* TblBase = (void*)PageTblBase;
+    uint  index = BaseOfApp / 0x1000 - 1;
+    uint  i = 0;
+    
+    for(i=0; i<=index; i++)
+    {
+        uint* addr = TblBase + i;
+        uint  value = *addr;
+        
+        value = value & 0xFFFFFFFD;
+        
+        *addr = value;
+    }
+}
 

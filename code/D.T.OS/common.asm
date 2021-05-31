@@ -1,3 +1,6 @@
+; Page Base 
+PageDirBase   equ    0x50000
+PageTblBase   equ    0x51000
 
 ; Base Definition
 BaseOfBoot    equ    0x7C00
