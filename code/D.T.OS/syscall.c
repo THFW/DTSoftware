@@ -9,7 +9,7 @@
                                                              "int   $0x80              \n"   \
                                                              :                               \
                                                              : "r"(param1), "r"(param2)      \
-                                                             : "eax", "ebx", "ecx", "edx"    \  
+                                                             : "eax", "ebx", "ecx", "edx"    \
                                                           )
 
 void Exit()
@@ -17,11 +17,11 @@ void Exit()
     SysCall(0, 0, 0, 0);
 }
 
-uint CreateMutex()
+uint CreateMutex(uint type)
 {
     volatile uint ret = 0;
     
-    SysCall(1, 0, &ret, 0); 
+    SysCall(1, 0, &ret, type); 
     
     return ret;
 }

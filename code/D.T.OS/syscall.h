@@ -3,9 +3,15 @@
 
 #include "type.h"
 
+enum
+{
+    Normal,
+    Strict
+};
+
 void Exit();
 
-uint CreateMutex();
+uint CreateMutex(uint type);
 void EnterCritical(uint mutex);
 void ExitCritical(uint mutex);
 uint DestroyMutex(uint mutex);
