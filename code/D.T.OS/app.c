@@ -26,7 +26,7 @@ static void RegApp(const char* name, void(*tmain)(), byte pri)
     }
 }
 
-void AppModInit()
+void AppMain()
 {
     RegApp("Task A", TaskA, 255);
     RegApp("Task B", TaskB, 230);

@@ -8,8 +8,8 @@
 #define MAX_READY_TASK      (MAX_TASK_NUM - MAX_RUNNING_TASK)
 #define PID_BASE            0x10
 
-extern AppInfo* GetAppToRun(uint index);
-extern uint GetAppNum();
+static AppInfo* (*GetAppToRun)(uint index) = NULL;
+static uint (*GetAppNum)() = NULL;
 
 void (* const RunTask)(volatile Task* pt) = NULL;
 void (* const LoadTask)(volatile Task* pt) = NULL;
@@ -156,14 +156,17 @@ static void ReadyToRunning()
 
 static void RunningToReady()
 {
-    TaskNode* tn = (TaskNode*)Queue_Front(&gRunningTask);
-    
-    if( !IsEqual(tn, (QueueNode*)&gIdleTask) )
+    if( Queue_Length(&gRunningTask) > 0 )
     {
-        if( tn->task.current == tn->task.total )
+        TaskNode* tn = (TaskNode*)Queue_Front(&gRunningTask);
+        
+        if( !IsEqual(tn, (QueueNode*)&gIdleTask) )
         {
-            Queue_Remove(&gRunningTask);
-            Queue_Add(&gReadyTask, (QueueNode*)tn);
+            if( tn->task.current == tn->task.total )
+            {
+                Queue_Remove(&gRunningTask);
+                Queue_Add(&gReadyTask, (QueueNode*)tn);
+            }
         }
     }
 }
@@ -172,6 +175,9 @@ static void RunningToReady()
 void TaskModInit()
 {
     int i = 0;
+    
+    GetAppToRun = (void*)(*((uint*)GetAppToRunEntry));
+    GetAppNum = (void*)(*((uint*)GetAppNumEntry));
     
     Queue_Init(&gFreeTaskNode);
     Queue_Init(&gRunningTask);

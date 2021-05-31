@@ -3,6 +3,7 @@
 BaseOfBoot    equ    0x7C00
 BaseOfLoader  equ    0x9000
 BaseOfKernel  equ    0xB000
+BaseOfApp     equ    0xF000
 
 BaseOfSharedMemory   equ    0xA000
 
@@ -17,6 +18,8 @@ InitInterruptEntry   equ       BaseOfSharedMemory + 20
 EnableTimerEntry     equ       BaseOfSharedMemory + 24
 SendEOIEntry         equ       BaseOfSharedMemory + 28
 LoadTaskEntry        equ       BaseOfSharedMemory + 32
+GetAppToRunEntry     equ       BaseOfSharedMemory + 36
+GetAppNumEntry       equ       BaseOfSharedMemory + 40
 
 ; PIC-8259A Ports 
 MASTER_ICW1_PORT                        equ     0x20

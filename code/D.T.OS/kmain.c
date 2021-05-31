@@ -4,7 +4,9 @@
 
 void KMain()
 {
-    int n = PrintString("D.T.OS\n");
+    void (*AppModInit)() = (void*)BaseOfApp;
+    
+    PrintString("D.T.OS\n");
     
     PrintString("GDT Entry: ");
     PrintIntHex((uint)gGdtInfo.entry);

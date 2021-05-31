@@ -11,8 +11,4 @@ typedef struct
     byte priority;
 } AppInfo;
 
-void AppModInit();
-AppInfo* GetAppToRun(uint index);
-uint GetAppNum();
-
 #endif

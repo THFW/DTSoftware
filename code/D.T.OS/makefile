@@ -9,10 +9,14 @@ KERNEL_SRC := kmain.c      \
               interrupt.c  \
               ihandler.c   \
               list.c       \
-              queue.c      \
+              queue.c      
+              
+APP_SRC :=    screen.c     \
+              utility.c    \
               app.c
 
 KERNEL_ADDR := B000
+APP_ADDR := F000
 IMG := D.T.OS
 IMG_PATH := /mnt/hgfs
 
@@ -23,6 +27,7 @@ DIR_OBJS := objs
 DIRS := $(DIR_DEPS) $(DIR_EXES) $(DIR_OBJS)
 
 KENTRY_SRC := kentry.asm
+AENTRY_SRC := aentry.asm
 BLFUNC_SRC := blfunc.asm
 BOOT_SRC   := boot.asm
 LOADER_SRC := loader.asm
@@ -31,19 +36,27 @@ COMMON_SRC := common.asm
 BOOT_OUT   := boot
 LOADER_OUT := loader
 KERNEL_OUT := kernel
+APP_OUT    := app
 KENTRY_OUT := $(DIR_OBJS)/kentry.o
+AENTRY_OUT := $(DIR_OBJS)/aentry.o
 
-EXE := kernel.out
-EXE := $(addprefix $(DIR_EXES)/, $(EXE))
+KERNEL_EXE := kernel.out
+KERNEL_EXE := $(addprefix $(DIR_EXES)/, $(KERNEL_EXE))
 
-SRCS := $(KERNEL_SRC)
-# SRCS := $(wildcard *.c)
-OBJS := $(SRCS:.c=.o)
-OBJS := $(addprefix $(DIR_OBJS)/, $(OBJS))
-DEPS := $(SRCS:.c=.dep)
-DEPS := $(addprefix $(DIR_DEPS)/, $(DEPS))
+KERNEL_OBJS := $(KERNEL_SRC:.c=.o)
+KERNEL_OBJS := $(addprefix $(DIR_OBJS)/, $(KERNEL_OBJS))
+KERNEL_DEPS := $(KERNEL_SRC:.c=.dep)
+KERNEL_DEPS := $(addprefix $(DIR_DEPS)/, $(KERNEL_DEPS))
 
-all : $(DIR_OBJS) $(DIR_EXES) $(IMG) $(BOOT_OUT) $(LOADER_OUT) $(KERNEL_OUT)
+APP_EXE := app.out
+APP_EXE := $(addprefix $(DIR_EXES)/, $(APP_EXE))
+
+APP_OBJS := $(APP_SRC:.c=.o)
+APP_OBJS := $(addprefix $(DIR_OBJS)/, $(APP_OBJS))
+APP_DEPS := $(APP_SRC:.c=.dep)
+APP_DEPS := $(addprefix $(DIR_DEPS)/, $(APP_DEPS))
+
+all : $(DIR_OBJS) $(DIR_EXES) $(IMG) $(BOOT_OUT) $(LOADER_OUT) $(KERNEL_OUT) $(APP_OUT)
 	@echo "Build Success ==> D.T.OS!"
 	
 ifeq ("$(MAKECMDGOALS)", "all")
@@ -70,15 +83,27 @@ $(LOADER_OUT) : $(LOADER_SRC) $(COMMON_SRC) $(BLFUNC_SRC)
 $(KENTRY_OUT) : $(KENTRY_SRC) $(COMMON_SRC)
 	nasm -f elf $< -o $@
     
-$(KERNEL_OUT) : $(EXE)
+$(KERNEL_OUT) : $(KERNEL_EXE)
 	./elf2kobj -c$(KERNEL_ADDR) $< $@
 	sudo mount -o loop $(IMG) $(IMG_PATH)
 	sudo cp $@ $(IMG_PATH)/$@
 	sudo umount $(IMG_PATH)
 	
-$(EXE) : $(KENTRY_OUT) $(OBJS)
+$(KERNEL_EXE) : $(KENTRY_OUT) $(KERNEL_OBJS)
 	ld -s $^ -o $@
+
+$(AENTRY_OUT) : $(AENTRY_SRC) $(COMMON_SRC)
+	nasm -f elf $< -o $@
+    
+$(APP_OUT) : $(APP_EXE)
+	./elf2kobj -c$(APP_ADDR) $< $@
+	sudo mount -o loop $(IMG) $(IMG_PATH)
+	sudo cp $@ $(IMG_PATH)/$@
+	sudo umount $(IMG_PATH)
 	
+$(APP_EXE) : $(AENTRY_OUT) $(APP_OBJS)
+	ld -s $^ -o $@
+		
 $(DIR_OBJS)/%.o : %.c
 	gcc -fno-builtin -fno-stack-protector -c $(filter %.c, $^) -o $@
 
@@ -95,7 +120,7 @@ endif
 	gcc -MM -E $(filter %.c, $^) | sed 's,\(.*\)\.o[ :]*,objs/\1.o $@ : ,g' > $@
 	
 clean :
-	rm -fr $(IMG) $(BOOT_OUT) $(LOADER_OUT) $(KERNEL_OUT) $(DIRS)
+	rm -fr $(IMG) $(BOOT_OUT) $(LOADER_OUT) $(KERNEL_OUT) $(APP_OUT) $(DIRS)
 	
 rebuild :
 	@$(MAKE) clean

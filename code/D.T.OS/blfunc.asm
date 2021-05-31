@@ -35,47 +35,54 @@ const:
 _start:
     jmp BLMain
     
-;
+; unshort LoadTarget( char*   Target,      notice ==> sizeof(char*) == 2
+;                     unshort TarLen,
+;                     unshort BaseOfTarget,
+;                     unshort BOT_Div_0x10,
+;                     char*   Buffer );
 ; return:
 ;     dx --> (dx != 0) ? success : failure
 LoadTarget:
-	mov ax, RootEntryOffset
-	mov cx, RootEntryLength
-	mov bx, Buffer
-	
-	call ReadSector
-	
-	mov si, Target
-	mov cx, TarLen
-	mov dx, 0
-	
-	call FindEntry
-	
-	cmp dx, 0
-	jz finish
-	
-	mov si, bx
-	mov di, EntryItem
-	mov cx, EntryItemLength
-	
-	call MemCpy
-	
-	mov ax, FatEntryLength
-	mov cx, [BPB_BytsPerSec]
-	mul cx
-	mov bx, BaseOfTarget
-	sub bx, ax
-	
-	mov ax, FatEntryOffset
-	mov cx, FatEntryLength
-	
-	call ReadSector
-	
-	mov dx, [EntryItem + 0x1A]
-	mov si, BaseOfTarget / 0x10
-	mov es, si
-	mov si, 0
-	
+    mov bp, sp
+    
+    mov ax, RootEntryOffset
+    mov cx, RootEntryLength
+    mov bx, [bp + 10] ; mov bx, Buffer
+    
+    call ReadSector
+    
+    mov si, [bp + 2] ; mov si, Target
+    mov cx, [bp + 4] ; mov cx, TarLen
+    mov dx, 0
+    
+    call FindEntry
+    
+    cmp dx, 0
+    jz finish
+    
+    mov si, bx
+    mov di, EntryItem
+    mov cx, EntryItemLength
+    
+    call MemCpy
+    
+    mov bp, sp
+    mov ax, FatEntryLength
+    mov cx, [BPB_BytsPerSec]
+    mul cx
+    mov bx, [bp + 6] ; mov bx, BaseOfTarget
+    sub bx, ax
+    
+    mov ax, FatEntryOffset
+    mov cx, FatEntryLength
+    
+    call ReadSector
+    
+    mov dx, [EntryItem + 0x1A]
+    mov es, [bp + 8] ; mov si, BaseOfTarget / 0x10
+                     ; mov es, si
+    xor si, si
+    
 loading:
     mov ax, dx
     add ax, 31
@@ -254,30 +261,15 @@ noequal:
 
     ret
 
-; es:bp --> string address
-; cx    --> string length
-Print:
-    mov dx, 0
-    mov ax, 0x1301
-	mov bx, 0x0007
-	int 0x10
-    ret
-
-; no parameter
-ResetFloppy:
-    push ax
-    mov ah, 0x00
-    mov dl, [BS_DrvNum]
-    int 0x13
-    pop ax
-    ret
 
 ; ax    --> logic sector number
 ; cx    --> number of sector
 ; es:bx --> target address
 ReadSector:
     
-    call ResetFloppy
+    mov ah, 0x00
+    mov dl, [BS_DrvNum]
+    int 0x13
     
     push bx
     push cx
