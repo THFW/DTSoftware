@@ -4,6 +4,8 @@
 
 #include "type.h"
 
-void fmem_test();
+void MemModInit(byte* mem, uint size);
+void* Malloc(uint size);
+void Free(void* ptr);
 
 #endif

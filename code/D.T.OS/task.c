@@ -67,8 +67,8 @@ static void InitTask(Task* pt, uint id, const char* name, void(*entry)(), ushort
     StrCpy(pt->name, name, sizeof(pt->name)-1);
     
     SetDescValue(AddrOff(pt->ldt, LDT_VIDEO_INDEX),  0xB8000, 0x07FFF, DA_DRWA + DA_32 + DA_DPL3);
-    SetDescValue(AddrOff(pt->ldt, LDT_CODE32_INDEX), 0x00,    PageDirBase - 1, DA_C + DA_32 + DA_DPL3);
-    SetDescValue(AddrOff(pt->ldt, LDT_DATA32_INDEX), 0x00,    PageDirBase - 1, DA_DRW + DA_32 + DA_DPL3);
+    SetDescValue(AddrOff(pt->ldt, LDT_CODE32_INDEX), 0x00,    KernelHeapBase - 1, DA_C + DA_32 + DA_DPL3);
+    SetDescValue(AddrOff(pt->ldt, LDT_DATA32_INDEX), 0x00,    KernelHeapBase - 1, DA_DRW + DA_32 + DA_DPL3);
     
     pt->ldtSelector = GDT_TASK_LDT_SELECTOR;
     pt->tssSelector = GDT_TASK_TSS_SELECTOR;
@@ -165,7 +165,7 @@ static void RunningToReady()
 void TaskModInit()
 {
     int i = 0;
-    byte* pStack = (byte*)(PageDirBase - (AppStackSize * MAX_TASK_BUFF_NUM));
+    byte* pStack = (byte*)(AppHeapBase - (AppStackSize * MAX_TASK_BUFF_NUM));
     
     for(i=0; i<MAX_TASK_BUFF_NUM; i++)
     {

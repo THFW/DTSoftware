@@ -3,10 +3,6 @@
 #include "utility.h"
 #include "list.h"
 
-#include <stdio.h>
-#include <time.h>
-#include <stdlib.h>
-
 #define FM_ALLOC_SIZE    32
 #define FM_NODE_SIZE     sizeof(FMemNode)
 #define VM_HEAD_SIZE     sizeof(VMemHead)
@@ -180,137 +176,43 @@ static int VMemFree(void* ptr)
     return ret;
 }
 
-void vmem_test()
+void MemModInit(byte* mem, uint size)
 {
-    static byte vmem[0x10000] = {0};
-    void* array[2000] = {0};
-    ListNode* pos = NULL;
-    int i = 0;
+    byte* fmem = mem;
+    uint fsize = size / 2;
+    byte* vmem = AddrOff(fmem, fsize);
+    uint vsize = size - fsize;
     
-    srand((unsigned)time(NULL));
-    
-    VMemInit(vmem, sizeof(vmem));
-    
-    List_ForEach(&gVMemList, pos)
-    {
-        VMemHead* current = (VMemHead*)pos;
-        
-        printf("i = %d\n", i++);
-        printf("used: %d\n", current->used);
-        printf("free: %d\n", current->free);
-        printf("\n");
-    }
-    
-    printf("Alloc Test:\n");
-    
-    i = 0;
-    
-    for(i=0; i<100000; i++)
-    {
-        int ii = i % 2000;
-        byte* p = VMemAlloc(1 + rand() % 400);
-        
-        if( array[ii] )
-        {
-            VMemFree(array[ii]);
-            
-            array[ii] = NULL; 
-        }
-        
-        array[ii] = p;
-        
-        if( i % 3 == 0 )
-        {
-            int index = rand() % 2000;
-            
-            VMemFree(array[index]);
-            
-            array[index] = NULL;
-        }
-    }
-    
-    printf("\n");
-    
-    printf("Free Test:\n");
-    
-    for(i=0; i<2000; i++)
-    {
-        VMemFree(array[i]);
-    }
-    
-    i = 0;
-    
-    List_ForEach(&gVMemList, pos)
-    {
-        VMemHead* current = (VMemHead*)pos;
-        
-        printf("i = %d\n", i++);
-        printf("used: %d\n", current->used);
-        printf("free: %d\n", current->free);
-        printf("\n");
-    }
+    FMemInit(fmem, fsize);
+    VMemInit(vmem, vsize);
 }
 
-void fmem_test()
+void* Malloc(uint size)
 {
-    static byte fmem[0x10000] = {0};
-    static void* array[2000] = {0};
-    int i = 0;
+    void* ret = NULL;
     
-    FMemNode* pos = NULL;
-    
-    FMemInit(fmem, sizeof(fmem));
-    
-    pos = gFMemList.node;
-    
-    while( pos )
+    if( size <= FM_ALLOC_SIZE )
     {
-        i++;
-        pos = pos->next;
+        ret = FMemAlloc();
     }
     
-    printf("i = %d\n", i++);
-    
-    for(i=0; i<100000; i++)
+    if( !ret ) 
     {
-        int ii = i % 2000;
-        byte* p = FMemAlloc();
-        
-        if( array[ii] )
+        ret = VMemAlloc(size);
+    }
+    
+    return ret;
+}
+
+void Free(void* ptr)
+{
+    if( ptr )
+    {
+        if( !FMemFree(ptr) )
         {
-            FMemFree(array[ii]);
-            
-            array[ii] = NULL; 
-        }
-        
-        array[ii] = p;
-        
-        if( i % 3 == 0 )
-        {
-            int index = rand() % 2000;
-            
-            FMemFree(array[index]);
-            
-            array[index] = NULL;
+            VMemFree(ptr);
         }
     }
-    
-    for(i=0; i<2000; i++)
-    {
-        FMemFree(array[i]);
-    }
-    
-    i = 0;
-    
-    pos = gFMemList.node;
-    
-    while( pos )
-    {
-        i++;
-        pos = pos->next;
-    }
-    
-    printf("i = %d\n", i++);
 }
 
 

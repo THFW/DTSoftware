@@ -4,8 +4,12 @@
 
 #define NULL  ((void*)0)
 
-#define PageDirBase     0x50000
-#define PageTblBase     (PageDirBase + 0x1000)
+#define HeapBase       0x70000
+#define HeapSize       0x20000
+#define KernelHeapBase HeapBase
+#define AppHeapBase    (HeapBase - HeapSize)
+#define PageDirBase    (HeapBase + HeapSize)
+#define PageTblBase    (PageDirBase + 0x1000)
 
 #define AppStackSize    512
 
