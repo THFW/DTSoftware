@@ -2,12 +2,12 @@
 
 PageDirBase0    equ    0x200000
 PageTblBase0    equ    0x201000
-PageDirBase1    equ    0x300000
-PageTblBase1    equ    0x301000
+PageDirBase1    equ    0x700000
+PageTblBase1    equ    0x701000
 
 ObjectAddrX     equ    0x401000
-TargetAddrY     equ    0x501000
-TargetAddrZ     equ    0x601000
+TargetAddrY     equ    0xD01000
+TargetAddrZ     equ    0xE01000
 
 org 0x9000
 
@@ -176,24 +176,42 @@ CODE32_SEGMENT:
     call InitPageTable
     
     mov eax, ObjectAddrX   ; 0x401000
-    mov ebx, TargetAddrY   ; 0x501000
+    mov ebx, TargetAddrY   ; 0xD01000
     mov ecx, PageDirBase0
     
     call MapAddress
     
     mov eax, ObjectAddrX   ; 0x401000
-    mov ebx, TargetAddrZ   ; 0x601000
+    mov ebx, TargetAddrZ   ; 0xE01000
     mov ecx, PageDirBase1
     
     call MapAddress
     
-    ; mov eax, PageDirBase0
+    mov eax, PageDirBase0
     
-    ; call SwitchPageTable
+    call SwitchPageTable
     
-    ; mov eax, PageDirBase1
+    mov ax, FlatModeRWSelector
+    mov ds, ax
+    mov ebp, ObjectAddrX
+    mov bx, 0x0C
+    mov dh, 12
+    mov dl, 33
     
-    ; call SwitchPageTable
+    call PrintString
+    
+    mov eax, PageDirBase1
+    
+    call SwitchPageTable
+    
+    mov ax, FlatModeRWSelector
+    mov ds, ax
+    mov ebp, ObjectAddrX
+    mov bx, 0x0C
+    mov dh, 13
+    mov dl, 31
+    
+    call PrintString
     
     jmp $
 
@@ -241,10 +259,10 @@ MapAddress:
     
     ret
 
-; es     --> flat mode selector
-; ds:esi --> source
-; es:edi --> destination
-; ecx    --> length
+; es    --> flat mode selector
+; ds:si --> source
+; es:di --> destination
+; cx    --> length
 MemCpy32:
     push esi
     push edi
