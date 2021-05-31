@@ -277,8 +277,8 @@ RunTask:
     
     mov esp, [ebp + 8]
     
-    lldt word [esp + 200]
-    ltr word [esp + 202]
+    lldt word [esp + 96]
+    ltr word [esp + 98]
     
     pop gs
     pop fs
@@ -299,7 +299,7 @@ LoadTask:
     
     mov eax, [ebp + 8]
     
-    lldt word [eax + 200]
+    lldt word [eax + 96]
     
     leave
     
