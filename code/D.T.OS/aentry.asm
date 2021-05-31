@@ -15,8 +15,7 @@ AppModInit: ; 0xF000
     push ebp
     mov ebp, esp
     
-    mov dword [GetAppToRunEntry], GetAppToRun
-    mov dword [GetAppNumEntry], GetAppNum
+    mov dword [AppMainEntry], AppMain
     
     push HeapSize
     push AppHeapBase
@@ -24,8 +23,6 @@ AppModInit: ; 0xF000
     call MemModInit
     
     add esp, 8
-
-    call AppMain
     
     leave
     

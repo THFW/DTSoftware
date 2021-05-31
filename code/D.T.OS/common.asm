@@ -25,8 +25,7 @@ InitInterruptEntry   equ       BaseOfSharedMemory + 20
 EnableTimerEntry     equ       BaseOfSharedMemory + 24
 SendEOIEntry         equ       BaseOfSharedMemory + 28
 LoadTaskEntry        equ       BaseOfSharedMemory + 32
-GetAppToRunEntry     equ       BaseOfSharedMemory + 36
-GetAppNumEntry       equ       BaseOfSharedMemory + 40
+AppMainEntry         equ       BaseOfSharedMemory + 36
 
 ; PIC-8259A Ports 
 MASTER_ICW1_PORT                        equ     0x20

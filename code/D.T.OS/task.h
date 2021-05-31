@@ -4,6 +4,7 @@
 
 #include "kernel.h"
 #include "queue.h"
+#include "app.h"
 
 typedef struct {
     uint gs;
@@ -56,6 +57,12 @@ typedef struct
     QueueNode head;
     Task task;
 } TaskNode;
+
+typedef struct
+{
+    QueueNode head;
+    AppInfo app;
+} AppNode;
 
 enum
 {
