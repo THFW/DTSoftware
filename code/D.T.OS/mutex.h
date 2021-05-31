@@ -3,8 +3,13 @@
 #define MUTEX_H
 
 #include "type.h"
+#include "list.h"
 
-typedef void Mutex;
+typedef struct 
+{
+    ListNode head;
+    uint lock;
+} Mutex;
 
 void MutexModInit();
 void MutexCallHandler(uint cmd, uint param);
