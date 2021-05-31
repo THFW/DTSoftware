@@ -17,7 +17,7 @@ GDT_ENTRY            :     Descriptor    0,            0,                   0
 CODE32_DESC          :     Descriptor    0,            Code32SegLen - 1,    DA_C + DA_32 + DA_DPL0
 VIDEO_DESC           :     Descriptor    0xB8000,      0x07FFF,             DA_DRWA + DA_32 + DA_DPL0
 CODE32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_C + DA_32 + DA_DPL0
-DATA32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_DRW + DA_32 + DA_DPL0
+DATA32_FLAT_DESC     :     Descriptor    0,            0xFFFFF,             DA_DRW + DA_32 - DA_DPL0
 TASK_LDT_DESC        :     Descriptor    0,            0,                   0
 TASK_TSS_DESC        :     Descriptor    0,            0,                   0
 ; GDT end

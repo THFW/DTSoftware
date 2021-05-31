@@ -22,9 +22,10 @@ void KMain()
     PrintIntDec((uint)gIdtInfo.size);
     PrintChar('\n');
     
-    IntModInit();
+    // IntModInit();
     
-    TaskModInit();
+    // TaskModInit();
     
-    LaunchTask();
+    // LaunchTask();
+    
 }

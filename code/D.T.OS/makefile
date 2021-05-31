@@ -7,7 +7,9 @@ KERNEL_SRC := kmain.c      \
               utility.c    \
               task.c       \
               interrupt.c  \
-              ihandler.c
+              ihandler.c   \
+              list.c       \
+              queue.c 
 
 KERNEL_ADDR := B000
 IMG := D.T.OS
