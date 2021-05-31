@@ -29,8 +29,8 @@ static void RegApp(const char* name, void(*tmain)(), byte pri)
 void AppMain()
 {
     RegApp("Task A", TaskA, 255);
-    RegApp("Task B", TaskB, 230);
-    // RegApp("Task C", TaskC, 230);
+    RegApp("Task B", TaskB, 255);
+    RegApp("Task C", TaskC, 255);
     // RegApp("Task D", TaskD, 255);
 }
 
@@ -61,11 +61,6 @@ void TaskA()
     
     PrintString(__FUNCTION__);
     
-    // *p = 1000;
-    
-    // PrintIntDec(*p);
-    
-    
     while( i < 5 )
     {
         SetPrintPos(8, 12);
@@ -73,8 +68,6 @@ void TaskA()
         i = (i + 1) % 26;
         Delay(1);
     }
-    
-    SetPrintPos(8, 12);
 }
 
 void TaskB()
