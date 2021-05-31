@@ -6,9 +6,11 @@
 
 using namespace std;
 
-#define PAGE_NUM  (0xFF + 1)
-#define FRAME_NUM (0x04)
-#define FP_NONE   (-1)
+#define PAGE_DIR_NUM  (0xF + 1)
+#define PAGE_SUB_NUM  (0xF + 1)
+#define PAGE_NUM      (PAGE_DIR_NUM * PAGE_SUB_NUM)
+#define FRAME_NUM     (0x04)
+#define FP_NONE       (-1)
 
 struct FrameItem
 {
@@ -26,13 +28,13 @@ struct FrameItem
 
 class PageTable
 {
-    int m_pt[PAGE_NUM];
+    int* m_pt[PAGE_DIR_NUM];
 public:
     PageTable()
     {
-        for(int i=0; i<PAGE_NUM; i++)
+        for(int i=0; i<PAGE_DIR_NUM; i++)
         {
-            m_pt[i] = FP_NONE;
+            m_pt[i] = NULL;
         }
     }
 
@@ -40,18 +42,39 @@ public:
     {
         if( (0 <= i) && (i < length()) )
         {
-            return m_pt[i];
+            int dir = ((i & 0xF0) >> 4);
+            int spn = (i & 0x0F);
+
+            if( m_pt[dir] == NULL )
+            {
+                m_pt[dir] = new int[PAGE_SUB_NUM];
+
+                for(int k=0; k<PAGE_SUB_NUM; k++)
+                {
+                    m_pt[dir][k] = FP_NONE;
+                }
+            }
+
+            return m_pt[dir][spn];
         }
         else
         {
             QCoreApplication::exit(-1);
-            return m_pt[0]; // for avoid warning
+            return m_pt[0][0]; // for avoid warning
         }
     }
 
     int length()
     {
         return PAGE_NUM;
+    }
+
+    ~PageTable()
+    {
+        for(int i=0; i<PAGE_DIR_NUM; i++)
+        {
+            delete[] m_pt[i];
+        }
     }
 };
 
@@ -300,6 +323,8 @@ int LRU()
     PrintLog(s);
     PrintLog("Select the LRU frame page to swap content out: Frame" + QString::number(obj));
     PrintLog("Write the selected page content back to disk.");
+
+    ClearFrameItem(obj);
 
     return obj;
 }
