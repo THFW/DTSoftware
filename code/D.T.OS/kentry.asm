@@ -12,6 +12,7 @@ extern InitInterrupt
 extern EnableTimer
 extern SendEOI
 extern RunTask
+extern LoadTask
 extern KMain
 extern ClearScreen
 
@@ -78,13 +79,16 @@ InitGlobal:
     mov dword [RunTask], eax
     
     mov eax, dword [InitInterruptEntry]
-    mov [InitInterrupt], eax
+    mov dword [InitInterrupt], eax
     
     mov eax, dword [EnableTimerEntry]
-    mov [EnableTimer], eax
+    mov dword [EnableTimer], eax
     
     mov eax, dword [SendEOIEntry]
-    mov [SendEOI], eax
+    mov dword [SendEOI], eax
+    
+    mov eax, dword [LoadTaskEntry]
+    mov dword [LoadTask], eax
     
     leave
     
