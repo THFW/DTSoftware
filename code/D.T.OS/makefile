@@ -66,11 +66,13 @@ all : $(DIR_OBJS) $(DIR_EXES) $(IMG) $(BOOT_OUT) $(LOADER_OUT) $(KERNEL_OUT) $(A
 	@echo "Build Success ==> D.T.OS!"
 	
 ifeq ("$(MAKECMDGOALS)", "all")
--include $(DEPS)
+-include $(KERNEL_DEPS)
+-include $(APP_DEPS)
 endif
 
 ifeq ("$(MAKECMDGOALS)", "")
--include $(DEPS)
+-include $(KERNEL_DEPS)
+-include $(APP_DEPS)
 endif
 
 $(IMG) :

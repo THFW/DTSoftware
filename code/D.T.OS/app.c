@@ -66,6 +66,8 @@ void TaskA()
     g_mutex = CreateMutex();
     
     EnterCritical(g_mutex);
+    EnterCritical(g_mutex);
+    EnterCritical(g_mutex);
     
     for(i=0; i<50; i++)
     {
@@ -83,11 +85,13 @@ void TaskB()
     
     PrintString(__FUNCTION__);
     
+    // ExitCritical(g_mutex);
+    
     EnterCritical(g_mutex);
     
     i = 0;
     
-    while(1)
+    while(0)
     {
         SetPrintPos(8, 16);
         PrintChar('0' + i);
@@ -95,7 +99,20 @@ void TaskB()
         Delay(1);
     }
     
+    SetPrintPos(8, 16);
+    
+    i = DestroyMutex(g_mutex);
+    
+    PrintIntDec(i);
+    PrintChar('\n');
+    
     ExitCritical(g_mutex);
+    
+    i = DestroyMutex(g_mutex);
+    
+    PrintIntDec(i);
+    PrintChar('\n');
+    
 }
 
 void TaskC()

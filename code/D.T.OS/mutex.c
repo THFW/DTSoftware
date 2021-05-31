@@ -3,6 +3,8 @@
 #include "memory.h"
 #include "task.h"
 
+extern volatile Task* gCTaskAddr;
+
 static List gMList = {0};
 
 void MutexModInit()
@@ -10,25 +12,25 @@ void MutexModInit()
     List_Init(&gMList);
 }
 
-void MutexCallHandler(uint cmd, uint param)
+void MutexCallHandler(uint cmd, uint param1, uint param2)
 {
     if( cmd == 0 )
     {
-        uint* pRet = (uint*)param;
+        uint* pRet = (uint*)param1;
         
         *pRet = (uint)SysCreateMutex();
     }
     else if( cmd == 1 )
     {
-        SysEnterCritical((Mutex*)param);
+        SysEnterCritical((Mutex*)param1, (uint*)param2);
     }
     else if( cmd == 2 )
     {
-        SysExitCritical((Mutex*)param);
+        SysExitCritical((Mutex*)param1);
     }
     else 
     {
-        SysDestroyMutex((Mutex*)param);
+        SysDestroyMutex((Mutex*)param1, (uint*)param2);
     }
 }
 
@@ -42,10 +44,6 @@ Mutex* SysCreateMutex()
         
         List_Add(&gMList, (ListNode*)ret);
     }
-    
-    PrintString("Mutex ID: ");
-    PrintIntHex(ret);
-    PrintChar('\n');
     
     return ret;
 }
@@ -67,22 +65,26 @@ static uint IsMutexValid(Mutex* mutex)
     return ret;
 }
 
-void SysDestroyMutex(Mutex* mutex)
+void SysDestroyMutex(Mutex* mutex, uint* result)
 {
     if( mutex )
     {
         ListNode* pos = NULL;
+        
+        *result = 0;
     
         List_ForEach(&gMList, pos)
         {
             if( IsEqual(pos, mutex) )
             {
-                List_DelNode(pos);
-                
-                Free(pos);
-                
-                PrintString("Destroy Mutex: ");
-                PrintIntHex(pos);
+                if( IsEqual(mutex->lock, 0) )
+                {
+                    List_DelNode(pos);
+                    
+                    Free(pos);
+                    
+                    *result = 1;
+                }
                 
                 break;
             }
@@ -90,20 +92,28 @@ void SysDestroyMutex(Mutex* mutex)
     }
 }
 
-void SysEnterCritical(Mutex* mutex)
+void SysEnterCritical(Mutex* mutex, uint* wait)
 {
     if( mutex && IsMutexValid(mutex) )
-    {
+    { 
         if( mutex->lock )
         {
-            PrintString("Move current to waitting status.\n");
-            MtxSchedule(WAIT);
+            if( IsEqual(mutex->lock, gCTaskAddr) )
+            {
+                *wait = 0;
+            }
+            else
+            {         
+                *wait = 1;
+                
+                MtxSchedule(WAIT);
+            }
         }
         else
         {
-            mutex->lock = 1;
+            mutex->lock = (uint)gCTaskAddr;
             
-            PrintString("Enter critical section, access critical resource.\n");
+            *wait = 0;
         }
     }
 }
@@ -113,10 +123,16 @@ void SysExitCritical(Mutex* mutex)
 {
     if( mutex && IsMutexValid(mutex) )
     {
-        mutex->lock = 0;
-        
-        PrintString("Notify all task to run again, critical resource is available.\n");
-        MtxSchedule(NOTIFY);
+        if( IsEqual(mutex->lock, gCTaskAddr) )
+        {
+            mutex->lock = 0;
+            
+            MtxSchedule(NOTIFY);
+        }
+        else
+        {   
+            KillTask();
+        }
     }
 }
 
