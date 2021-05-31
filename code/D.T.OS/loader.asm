@@ -63,6 +63,8 @@ BLMain:
 	
 	cmp dx, 0
 	jz output
+	
+	call StoreGlobal
 
     ; 1. load GDT
     lgdt [GdtPtr]
@@ -116,7 +118,15 @@ InitDescItem:
     pop eax
     
     ret
+
+;
+;
+StoreGlobal:
+    mov eax, dword [GdtPtr + 2]
+    mov dword [GdtEntry], eax
     
+    mov dword [GdtSize], GdtLen / 8
+    ret
     
 [section .s32]
 [bits 32]

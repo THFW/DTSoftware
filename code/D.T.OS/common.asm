@@ -1,9 +1,18 @@
 
-; Global Variable
+; Base Definition
 BaseOfBoot    equ    0x7C00
 BaseOfLoader  equ    0x9000
 BaseOfKernel  equ    0xB000
 
+BaseOfSharedMemory   equ    0xA000
+
+
+; Shared Value Address
+GdtEntry         equ       BaseOfSharedMemory + 0
+GdtSize          equ       BaseOfSharedMemory + 4
+IdtEntry         equ       BaseOfSharedMemory + 8
+IdtSize          equ       BaseOfSharedMemory + 12
+RunTaskEntry     equ       BaseOfSharedMemory + 16
 
 ; PIC-8259A Ports 
 MASTER_ICW1_PORT                        equ     0x20

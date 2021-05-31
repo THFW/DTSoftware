@@ -2,9 +2,9 @@
 #include "kernel.h"
 #include "screen.h"
 
-static int  gPosW = 0;
-static int  gPosH = 0;
-static char gColor = SCREEN_WHITE;
+static byte gPosW = 0;
+static byte gPosH = 0;
+static byte gColor = SCREEN_WHITE;
 
 void ClearScreen()
 {
@@ -24,13 +24,13 @@ void ClearScreen()
     SetPrintPos(0, 0);
 }
 
-int SetPrintPos(short w, short h)
+int SetPrintPos(byte w, byte h)
 {
     int ret = 0;
     
-    if( ret = ((0 <= w) && (w <= SCREEN_WIDTH) && (0 <= h) && (h <= SCREEN_HEIGHT)) )
+    if( ret = ((w < SCREEN_WIDTH) && (h < SCREEN_HEIGHT)) )
     {
-        unsigned short bx = SCREEN_WIDTH * h + w;
+        ushort bx = SCREEN_WIDTH * h + w;
         
         gPosW = w;
         gPosH = h;
@@ -73,13 +73,13 @@ int PrintChar(char c)
     } 
     else
     {
-        int pw = gPosW;
-        int ph = gPosH;
+        byte pw = gPosW;
+        byte ph = gPosH;
         
-        if( (0 <= pw) && (pw <= SCREEN_WIDTH) && (0 <= ph) && (ph <= SCREEN_HEIGHT) )
+        if( (pw < SCREEN_WIDTH) && (ph < SCREEN_HEIGHT) )
         {
-            int edi = (SCREEN_WIDTH * ph + pw) * 2;
-            char ah = gColor;
+            uint edi = (SCREEN_WIDTH * ph + pw) * 2;
+            byte ah = gColor;
             char al = c;
             
             asm volatile(
@@ -129,7 +129,7 @@ int PrintString(const char* s)
     return ret;
 }
 
-int PrintIntHex(unsigned int n)
+int PrintIntHex(uint n)
 {
     char hex[11] = {'0', 'x', 0};
     int i = 0;
