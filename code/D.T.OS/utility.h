@@ -2,13 +2,14 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
-#define AddrOff(a, i)    ((void*)((uint)a + i * sizeof(*a)))
+#define AddrOff(a, i)    ((void*)((uint)(a) + (i) * sizeof(*(a))))
+#define AddrIndex(b, a)  (((uint)(b) - (uint)(a))/sizeof(*(b)))
 
-#define IsEqual(a, b)         \
-({                            \
-    unsigned ta = (unsigned)a;\
-    unsigned tb = (unsigned)b;\
-    !(ta - tb);               \
+#define IsEqual(a, b)           \
+({                              \
+    unsigned ta = (unsigned)(a);\
+    unsigned tb = (unsigned)(b);\
+    !(ta - tb);                 \
 })
 
 #define OffsetOf(type, member)  ((unsigned)&(((type*)0)->member))
