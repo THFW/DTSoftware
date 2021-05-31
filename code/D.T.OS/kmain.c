@@ -5,6 +5,8 @@
 void (* const InitInterrupt)() = NULL;
 void (* const EnableTimer)() = NULL;
 void (* const SendEOI)(uint port) = NULL;
+
+Task* gCTaskAddr = NULL;
 Task p = {0};
 
 void Delay(int n)
@@ -43,15 +45,13 @@ void TaskA()
     }
 }
 
+void TimerHandlerEntry();
+
 void TimerHandler()
 {
     static uint i = 0;
     
     i = (i + 1) % 10;
-    
-    SetPrintPos(0, 13);
-        
-    PrintString("Timer: ");
     
     if( i == 0 )
     {
@@ -67,8 +67,6 @@ void TimerHandler()
     }
     
     SendEOI(MASTER_EOI_PORT);
-    
-    asm volatile("leave\n""iret\n");
 }
 
 void KMain()
@@ -104,7 +102,7 @@ void KMain()
     p.rv.eflags = 0x3202;
     
     p.tss.ss0 = GDT_DATA32_FLAT_SELECTOR;
-    p.tss.esp0 = 0x9000;
+    p.tss.esp0 = (uint)&p.rv + sizeof(p.rv);
     p.tss.iomb = sizeof(p.tss);
     
     SetDescValue(p.ldt + LDT_VIDEO_INDEX,  0xB8000, 0x07FFF, DA_DRWA + DA_32 + DA_DPL3);
@@ -117,11 +115,13 @@ void KMain()
     SetDescValue(&gGdtInfo.entry[GDT_TASK_LDT_INDEX], (uint)&p.ldt, sizeof(p.ldt)-1, DA_LDT + DA_DPL0);
     SetDescValue(&gGdtInfo.entry[GDT_TASK_TSS_INDEX], (uint)&p.tss, sizeof(p.tss)-1, DA_386TSS + DA_DPL0);
     
-    SetIntHandler(gIdtInfo.entry + 0x20, (uint)TimerHandler);
+    SetIntHandler(gIdtInfo.entry + 0x20, (uint)TimerHandlerEntry);
     
     InitInterrupt();
     
     EnableTimer();
     
-    RunTask(&p);
+    gCTaskAddr = &p;
+    
+    RunTask(gCTaskAddr);
 }

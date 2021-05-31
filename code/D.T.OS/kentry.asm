@@ -1,7 +1,11 @@
 %include "common.asm"
 
 global _start
+global TimerHandlerEntry
 
+extern TimerHandler
+
+extern gCTaskAddr
 extern gGdtInfo
 extern gIdtInfo
 extern InitInterrupt
@@ -10,6 +14,38 @@ extern SendEOI
 extern RunTask
 extern KMain
 extern ClearScreen
+
+%macro BeginISR 0
+    sub esp, 4
+    
+    pushad
+    
+    push ds
+    push es
+    push fs
+    push gs
+    
+    mov dx, ss
+    mov ds, dx
+    mov es, dx
+    
+    mov esp, BaseOfLoader
+%endmacro
+
+%macro EndISR 0
+    mov esp, [gCTaskAddr]
+    
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    
+    popad
+    
+    add esp, 4
+    
+    iret
+%endmacro
 
 [section .text]
 [bits 32]
@@ -53,3 +89,11 @@ InitGlobal:
     leave
     
     ret
+    
+;
+;
+TimerHandlerEntry:
+BeginISR 
+    call TimerHandler
+EndISR
+    
