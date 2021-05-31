@@ -3,7 +3,9 @@
 
 int main()
 {
-    fmem_test();
+    // fmem_test();
+    
+    vmem_test();
     
     return 0;
 }
