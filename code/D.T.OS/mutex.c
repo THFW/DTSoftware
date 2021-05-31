@@ -95,13 +95,13 @@ static void SysNormalEnter(Mutex* mutex, uint* wait)
     }
 }
 
-static void SysStrictEnter(Mutex* mutex, uint* wait)
+static void SysStrictEnter(Mutex* mutex,uint* wait)
 {
     if( mutex->lock )
     {
         if( IsEqual(mutex->lock, gCTaskAddr) )
         {
-            *wait = 0;
+                *wait = 0;
         }
         else
         {         

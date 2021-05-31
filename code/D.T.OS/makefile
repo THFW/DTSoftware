@@ -19,8 +19,6 @@ APP_SRC :=    screen.c     \
               queue.c      \
               memory.c     \
               syscall.c    \
-              demo1.c      \
-              demo2.c      \
               app.c
 
 KERNEL_ADDR := B000
