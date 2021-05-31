@@ -12,6 +12,22 @@ static TaskNode gTaskBuff[MAX_RUNNING_TASK] = {0};
 static Queue gRunningTask = {0};
 static TSS gTSS = {0};
 
+static void TaskEntry()
+{
+    if( gCTaskAddr )
+    {
+        gCTaskAddr->tmain();
+    }
+    
+    // to destory current task here
+    asm volatile(
+        "movw  $0,  %ax \n"
+        "int   $0x80    \n"
+    );
+    
+    while(1);  // TODO: schedule next task to run
+}
+
 void TaskA()
 {
     int i = 0;
@@ -20,13 +36,15 @@ void TaskA()
     
     PrintString(__FUNCTION__);
     
-    while(1)
+    while( i < 5 )
     {
         SetPrintPos(8, 12);
         PrintChar('A' + i);
         i = (i + 1) % 26;
         Delay(1);
     }
+    
+    SetPrintPos(8, 12);
 }
 
 void TaskB()
@@ -96,8 +114,10 @@ static void InitTask(Task* pt, void(*entry)())
     pt->rv.ss = LDT_DATA32_SELECTOR;
     
     pt->rv.esp = (uint)pt->stack + sizeof(pt->stack);
-    pt->rv.eip = (uint)entry;
+    pt->rv.eip = (uint)TaskEntry;
     pt->rv.eflags = 0x3202;
+    
+    pt->tmain = entry;
     
     SetDescValue(AddrOff(pt->ldt, LDT_VIDEO_INDEX),  0xB8000, 0x07FFF, DA_DRWA + DA_32 + DA_DPL3);
     SetDescValue(AddrOff(pt->ldt, LDT_CODE32_INDEX), 0x00,    0xFFFFF, DA_C + DA_32 + DA_DPL3);
@@ -151,6 +171,11 @@ void Schedule()
     PrepareForRun(gCTaskAddr);
     
     LoadTask(gCTaskAddr);
+}
+
+void KillTask()
+{
+    PrintString(__FUNCTION__);  // destroy current task
 }
 
 

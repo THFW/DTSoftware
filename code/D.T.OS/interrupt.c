@@ -9,6 +9,7 @@ void (* const SendEOI)(uint port) = NULL;
 void IntModInit()
 {
     SetIntHandler(AddrOff(gIdtInfo.entry, 0x20), (uint)TimerHandlerEntry);
+    SetIntHandler(AddrOff(gIdtInfo.entry, 0x80), (uint)SysCallHandlerEntry);
     
     InitInterrupt();
 }
@@ -22,7 +23,7 @@ int SetIntHandler(Gate* pGate, uint ifunc)
         pGate->offset1  = ifunc & 0xFFFF;
         pGate->selector = GDT_CODE32_FLAT_SELECTOR;
         pGate->dcount   = 0;
-        pGate->attr     = DA_386IGate + DA_DPL0;
+        pGate->attr     = DA_386IGate + DA_DPL3;
         pGate->offset2  = (ifunc >> 16) & 0xFFFF;
     }
     

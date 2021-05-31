@@ -42,6 +42,7 @@ typedef struct
     Descriptor ldt[3];
     ushort     ldtSelector;
     ushort     tssSelector;
+    void (*tmain)();
     uint       id;
     char       name[8]; 
     byte       stack[512];
@@ -59,5 +60,6 @@ extern void (* const LoadTask)(volatile Task* pt);
 void TaskModInit();
 void LaunchTask();
 void Schedule();
+void KillTask();
 
 #endif

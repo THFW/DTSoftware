@@ -1,5 +1,6 @@
 
 #include "interrupt.h"
+#include "task.h"
 
 void TimerHandler()
 {
@@ -13,4 +14,12 @@ void TimerHandler()
     }
     
     SendEOI(MASTER_EOI_PORT);
+}
+
+void SysCallHandler(ushort ax)   // __cdecl__
+{  
+    if( ax == 0 )
+    {
+        KillTask();
+    }
 }

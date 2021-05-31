@@ -3,8 +3,9 @@
 #define IHANDLER_H
 
 #define DeclHandler(name)    void name##Entry(); \
-                             void name();
+                             void name()
                              
 DeclHandler(TimerHandler);
+DeclHandler(SysCallHandler);
 
 #endif
