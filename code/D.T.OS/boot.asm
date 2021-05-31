@@ -1,13 +1,13 @@
 
-BaseOfBoot    equ    0x7C00
+%include "blfunc.asm"
+%include "common.asm"
 
 org BaseOfBoot
 
-%include "blfunc.asm"
 
 interface:
     BaseOfStack    equ    BaseOfBoot
-    BaseOfTarget   equ    0x9000
+    BaseOfTarget   equ    BaseOfLoader
     Target db  "LOADER     "
     TarLen equ ($-Target)
 
@@ -22,7 +22,7 @@ BLMain:
 	
 	cmp dx, 0
 	jz output
-	jmp BaseOfTarget
+	jmp BaseOfLoader
 	
 output:	
     mov bp, ErrStr
